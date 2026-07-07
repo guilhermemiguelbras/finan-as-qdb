@@ -395,6 +395,8 @@ function saveFixed(d) {
   window.guardarDadosSheet({
     date: new Date().toISOString(),
     type: "fixed_expenses",
+    year: "",
+    month: "",
     category: "Despesas Fixas",
     description: "Atualização de despesas fixas",
     amount: "",
@@ -409,6 +411,8 @@ function saveDebts(d) {
   window.guardarDadosSheet({
     date: new Date().toISOString(),
     type: "debts",
+    year: "",
+    month: "",
     category: "Dívidas",
     description: "Atualização de dívidas",
     amount: "",
@@ -540,6 +544,19 @@ function varKey(y,m) { return `${STORAGE_KEY}_${y}_${String(m).padStart(2,'0')}`
 function loadMonth(y,m) { try { return JSON.parse(localStorage.getItem(varKey(y,m)))||{cats:{}}; } catch { return {cats:{}}; } }
 function saveMonth(y,m,data) {
   localStorage.setItem(varKey(y,m), JSON.stringify(data));
+
+  window.guardarDadosSheet({
+    date: new Date().toISOString(),
+    type: "variable_month",
+    year: y,
+    month: m,
+    category: "Despesas Variáveis",
+    description: `Atualização de variáveis - ${String(m).padStart(2,'0')}/${y}`,
+    amount: monthTotal(data),
+    status: "updated",
+    notes: JSON.stringify(data)
+  });
+
   const b = document.getElementById('save-badge');
   b.classList.add('show');
   setTimeout(()=>b.classList.remove('show'),1800);
