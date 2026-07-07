@@ -389,9 +389,33 @@ function fmt(n) { return (+n||0).toLocaleString('pt-PT',{minimumFractionDigits:2
 
 // ─── FIXED PERSISTENCE ────────────────────────────────────────────────────────
 function loadFixed()  { try { return JSON.parse(localStorage.getItem(FIXED_KEY)) || DEFAULT_EXPENSES.map(e=>({...e})); } catch { return DEFAULT_EXPENSES.map(e=>({...e})); } }
-function saveFixed(d) { localStorage.setItem(FIXED_KEY, JSON.stringify(d)); }
+function saveFixed(d) {
+  localStorage.setItem(FIXED_KEY, JSON.stringify(d));
+
+  window.guardarDadosSheet({
+    date: new Date().toISOString(),
+    type: "fixed_expenses",
+    category: "Despesas Fixas",
+    description: "Atualização de despesas fixas",
+    amount: "",
+    status: "updated",
+    notes: JSON.stringify(d)
+  });
+}
 function loadDebts()  { try { return JSON.parse(localStorage.getItem(DEBTS_KEY)) || DEFAULT_DEBTS.map(d=>({...d})); } catch { return DEFAULT_DEBTS.map(d=>({...d})); } }
-function saveDebts(d) { localStorage.setItem(DEBTS_KEY, JSON.stringify(d)); }
+function saveDebts(d) {
+  localStorage.setItem(DEBTS_KEY, JSON.stringify(d));
+
+  window.guardarDadosSheet({
+    date: new Date().toISOString(),
+    type: "debts",
+    category: "Dívidas",
+    description: "Atualização de dívidas",
+    amount: "",
+    status: "updated",
+    notes: JSON.stringify(d)
+  });
+}
 
 let fixedDonutChart = null, fixedBarChart = null;
 
