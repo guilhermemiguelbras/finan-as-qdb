@@ -473,7 +473,11 @@ function addFixedItem() {
   const expenses = loadFixed();
   expenses.push({ label: 'Nova despesa', amount: 0 });
   saveFixed(expenses);
-  renderFixedTab();
+ renderFixedTab();
+
+carregarDadosSheet().then(dados => {
+  console.log("Ligação ao Google Sheets OK:", dados);
+});
   // Focus the new label input
   const inputs = document.querySelectorAll('.fixed-name-input');
   if (inputs.length) inputs[inputs.length-1].focus();
