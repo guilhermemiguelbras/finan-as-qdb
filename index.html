@@ -121,6 +121,8 @@
   .var-row:hover { background: var(--surface2); }
   .var-icon { font-size: 1.1rem; text-align: center; }
   .var-label { font-size: 0.9rem; color: var(--text); }
+  .var-custom-name-input { font-size: 0.9rem; color: var(--text); border: none; background: transparent; outline: none; width: 100%; border-bottom: 1px solid transparent; padding: 2px 0; }
+  .var-custom-name-input:focus { border-bottom-color: var(--variable); }
   .var-input-wrap { display: flex; align-items: center; gap: 5px; justify-content: flex-end; }
   .var-input {
     font-family: 'Playfair Display', serif; font-size: 1.05rem; font-weight: 700;
@@ -304,6 +306,7 @@
     <div class="card" style="padding-bottom:1.25rem">
       <div class="card-title"><span class="dot" style="background:#5b3d8f"></span>Lançar despesas</div>
       <div id="var-entry"></div>
+      <button class="add-fixed-btn" onclick="addVariableItem()" style="color:var(--variable);border-color:rgba(91,61,143,0.35)">＋ Adicionar despesa variável</button>
     </div>
 
     <!-- RIGHT: donut + line -->
@@ -504,6 +507,21 @@ const MONTHS_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho'
 function fmt(n) { return (+n||0).toLocaleString('pt-PT',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function allVarCats() { return VAR_GROUPS.flatMap(g => g.cats); }
 function findVarCat(key) { return allVarCats().find(c => c.key === key); }
+function customVarId() { return 'custom_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7); }
+function customVarColor(i) {
+  const colors = ['#5b3d8f','#2a5f8f','#1a7a4a','#b03060','#c06020','#3d6bbf','#6b8f3d'];
+  return colors[i % colors.length];
+}
+function normaliseCustomVar(item, i = 0) {
+  return {
+    id: item?.id || customVarId(),
+    label: item?.label || 'Nova despesa variável',
+    amount: item?.amount === '' ? '' : (+item?.amount || 0),
+    tag: normaliseTag(item?.tag || (variableTagFilter === 'all' ? 'QDB' : variableTagFilter)),
+    color: item?.color || customVarColor(i),
+    icon: item?.icon || '➕'
+  };
+}
 
 // ─── FIXED PERSISTENCE ────────────────────────────────────────────────────────
 function normalizeFixedArray(arr, defaults) {
@@ -757,7 +775,7 @@ function addDebtItem() {
 function varKey(y,m) { return `${STORAGE_KEY}_${y}_${String(m).padStart(2,'0')}`; }
 
 function normalizeMonthData(data) {
-  const normalized = { cats: {} };
+  const normalized = { cats: {}, custom: [] };
   const source = data && data.cats ? data.cats : {};
   allVarCats().forEach(cat => {
     const raw = source[cat.key];
@@ -774,6 +792,10 @@ function normalizeMonthData(data) {
       };
     }
   });
+
+  const custom = Array.isArray(data?.custom) ? data.custom : [];
+  normalized.custom = custom.map((item, i) => normaliseCustomVar(item, i));
+
   return normalized;
 }
 
@@ -831,11 +853,16 @@ function catTag(entry, cat) {
 
 function monthTotal(data, tag = 'all') {
   const normalized = normalizeMonthData(data);
-  return allVarCats().reduce((sum, cat) => {
+  const baseTotal = allVarCats().reduce((sum, cat) => {
     const entry = normalized.cats[cat.key];
     if (tag !== 'all' && catTag(entry, cat) !== tag) return sum;
     return sum + catAmount(entry);
   }, 0);
+  const customTotal = normalized.custom.reduce((sum, item) => {
+    if (tag !== 'all' && normaliseTag(item.tag) !== tag) return sum;
+    return sum + (+item.amount || 0);
+  }, 0);
+  return baseTotal + customTotal;
 }
 
 function variableTagTotals(data) {
@@ -917,8 +944,36 @@ function renderVariableMonth() {
     });
   });
 
+  const visibleCustom = (data.custom || []).filter(item => variableTagFilter === 'all' || normaliseTag(item.tag) === variableTagFilter);
+  if (visibleCustom.length) {
+    const title = document.createElement('div');
+    title.className = 'var-section-title';
+    title.textContent = 'Personalizadas';
+    entry.appendChild(title);
+
+    visibleCustom.forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'var-row';
+      row.innerHTML = `
+        <div class="var-icon">${item.icon || '➕'}</div>
+        <div>
+          <input class="var-custom-name-input" type="text" value="${item.label}" data-custom-id="${item.id}" data-field="label" aria-label="Nome da despesa variável personalizada" />
+          <div class="var-prev">Personalizada</div>
+        </div>
+        <div class="var-input-wrap">
+          <input class="var-input" type="number" min="0" step="0.01" placeholder="0,00"
+            value="${item.amount ?? ''}" data-custom-id="${item.id}" data-field="amount" aria-label="Valor de ${item.label}" />
+          <span class="var-currency">€</span>
+        </div>
+        ${tagSelectHTML(item.tag, `data-custom-id="${item.id}" data-field="tag" aria-label="Tag de ${item.label}"`)}
+      `;
+      row.querySelectorAll('input, select').forEach(el => { el.addEventListener('input', onCustomVarInput); el.addEventListener('change', onCustomVarInput); });
+      entry.appendChild(row);
+    });
+  }
+
   if (!entry.innerHTML) {
-    entry.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;padding:0.75rem 0">Sem categorias nesta tag.</div>';
+    entry.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;padding:0.75rem 0">Sem categorias nesta tag. Podes adicionar uma despesa variável nova abaixo.</div>';
   }
 
   updateVarKPIs(data);
@@ -956,6 +1011,44 @@ function onVarInput(e) {
   updateVarInsight(data);
 }
 
+function onCustomVarInput(e) {
+  const data = loadMonth(currentYear, currentMonth);
+  const id = e.target.dataset.customId;
+  const field = e.target.dataset.field;
+  const idx = (data.custom || []).findIndex(item => item.id === id);
+  if (idx === -1) return;
+
+  if (field === 'amount') data.custom[idx].amount = e.target.value;
+  else if (field === 'tag') data.custom[idx].tag = normaliseTag(e.target.value);
+  else if (field === 'label') data.custom[idx].label = e.target.value || 'Nova despesa variável';
+
+  saveMonth(currentYear, currentMonth, data);
+
+  if (field === 'tag') {
+    renderVariableMonth();
+    return;
+  }
+
+  updateVarKPIs(data);
+  renderVarCharts(data);
+  renderHistory();
+  updateVarInsight(data);
+}
+
+function addVariableItem() {
+  const data = loadMonth(currentYear, currentMonth);
+  data.custom = Array.isArray(data.custom) ? data.custom : [];
+  data.custom.push(normaliseCustomVar({
+    label: 'Nova despesa variável',
+    amount: 0,
+    tag: variableTagFilter === 'all' ? 'QDB' : variableTagFilter
+  }, data.custom.length));
+  saveMonth(currentYear, currentMonth, data);
+  renderVariableMonth();
+  const inputs = document.querySelectorAll('.var-custom-name-input');
+  if (inputs.length) inputs[inputs.length - 1].focus();
+}
+
 function updateVarKPIs(data) {
   const vt=monthTotal(data, variableTagFilter);
   const ft=fixedTotal(fixedTagFilter);
@@ -975,6 +1068,16 @@ function renderVarCharts(data) {
       labels.push(`${cat.label} · ${tag}`);
       amounts.push(v);
       colors.push(cat.color);
+    }
+  });
+
+  normalized.custom.forEach((item, i) => {
+    const v = +item.amount || 0;
+    const tag = normaliseTag(item.tag);
+    if (v > 0 && (variableTagFilter === 'all' || tag === variableTagFilter)) {
+      labels.push(`${item.label} · ${tag}`);
+      amounts.push(v);
+      colors.push(item.color || customVarColor(i));
     }
   });
 
@@ -1010,10 +1113,12 @@ function renderHistory() {
   }
   [...all].reverse().forEach(({y,m,data:d})=>{
     const total=monthTotal(d, variableTagFilter);
-    const catCount=allVarCats().filter(cat => {
+    const baseCount=allVarCats().filter(cat => {
       const entry = d.cats[cat.key];
       return catAmount(entry)>0 && (variableTagFilter === 'all' || catTag(entry, cat) === variableTagFilter);
     }).length;
+    const customCount=(d.custom || []).filter(item => (+item.amount || 0)>0 && (variableTagFilter === 'all' || normaliseTag(item.tag) === variableTagFilter)).length;
+    const catCount=baseCount + customCount;
     const tr=document.createElement('tr');
     tr.innerHTML=`<td><span class="month-chip">${MONTHS_PT[m-1]} ${y}</span></td><td style="color:var(--text-muted)">${catCount} categoria${catCount!==1?'s':''}</td><td>${fmt(total)} €</td>`;
     body.appendChild(tr);
@@ -1037,7 +1142,7 @@ function updateVarInsight(data) {
   const tagText = variableTagFilter === 'all' ? 'todas as tags' : `tag <strong>${variableTagFilter}</strong>`;
   document.getElementById('var-insight').innerHTML=vt>0
     ? `<strong>Este mês:</strong> Variáveis de <strong>${fmt(vt)} €</strong> em ${tagText} representam <strong>${pct}%</strong> do total filtrado (<strong>${fmt(grand)} €</strong>).${avgText}`
-    : `<strong>Dica:</strong> Preenche os valores acima — ficam guardados automaticamente por mês e por tag.`;
+    : `<strong>Dica:</strong> Preenche os valores acima — ficam guardados automaticamente por mês e por tag. Também podes adicionar despesas variáveis novas.`;
 }
 
 // ─── TAB SWITCH ──────────────────────────────────────────────────────────────
