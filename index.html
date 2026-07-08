@@ -65,7 +65,7 @@
 
   /* FIXED LIST (editable) */
   .fixed-list { list-style: none; }
-  .fixed-item { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 0.45rem 0; border-bottom: 0.5px solid var(--border); }
+  .fixed-item { display: grid; grid-template-columns: 1fr auto 110px; gap: 8px; align-items: center; padding: 0.45rem 0; border-bottom: 0.5px solid var(--border); }
   .fixed-item:last-child { border-bottom: none; }
   .fixed-name-input { font-size: 0.875rem; color: var(--text); border: none; background: transparent; outline: none; width: 100%; border-bottom: 1px solid transparent; padding: 2px 0; }
   .fixed-name-input:focus { border-bottom-color: var(--accent); }
@@ -110,7 +110,7 @@
 
   /* VAR CATEGORIES — simple table-like rows */
   .var-section-title { font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin: 1.5rem 0 0.6rem; padding-bottom: 0.4rem; border-bottom: 0.5px solid var(--border); }
-  .var-row { display: grid; grid-template-columns: 1.8rem 1fr 110px; gap: 10px; align-items: center; padding: 0.55rem 0.75rem; border-radius: 8px; transition: background 0.1s; }
+  .var-row { display: grid; grid-template-columns: 1.8rem 1fr 110px 110px; gap: 10px; align-items: center; padding: 0.55rem 0.75rem; border-radius: 8px; transition: background 0.1s; }
   .var-row:hover { background: var(--surface2); }
   .var-icon { font-size: 1.1rem; text-align: center; }
   .var-label { font-size: 0.9rem; color: var(--text); }
@@ -134,14 +134,38 @@
   .history-table tr:last-child td { border-bottom: none; }
   .month-chip { font-size: 0.7rem; background: var(--surface2); border-radius: 6px; padding: 2px 8px; color: var(--text-muted); display: inline-block; }
 
+
+  /* TAG FILTERS */
+  .tag-toolbar { background: var(--surface); border-radius: var(--radius); padding: 0.9rem 1rem; box-shadow: var(--shadow); margin-bottom: 1.25rem; display:flex; flex-wrap:wrap; align-items:center; gap:0.55rem; }
+  .tag-toolbar-label { font-size:0.7rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-muted); margin-right:0.25rem; }
+  .tag-filter-btn { border:0.5px solid var(--border); background: var(--surface); color: var(--text-muted); border-radius: 999px; padding:0.45rem 0.75rem; font-size:0.78rem; cursor:pointer; transition: background 0.15s, color 0.15s, border-color 0.15s; }
+  .tag-filter-btn:hover { background: var(--surface2); color: var(--text); }
+  .tag-filter-btn.active { background: var(--text); color:#f7f5f0; border-color: var(--text); }
+  .tag-summary { display:grid; grid-template-columns: repeat(4, 1fr); gap:0.8rem; margin-bottom:1.25rem; }
+  .tag-card { background: var(--surface); border-radius: var(--radius); padding:0.85rem 1rem; box-shadow: var(--shadow); border-left:3px solid var(--accent); }
+  .tag-card.guilherme { border-left-color:#2a5f8f; }
+  .tag-card.maysa { border-left-color:#b03060; }
+  .tag-card.qdb { border-left-color:#1a7a4a; }
+  .tag-card.total { border-left-color:#1a1714; }
+  .tag-card-label { font-size:0.66rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-muted); margin-bottom:0.25rem; }
+  .tag-card-value { font-family:'Playfair Display', serif; font-size:1.25rem; font-weight:700; color:var(--text); }
+  .tag-select { border:0.5px solid var(--border); border-radius:8px; background: var(--surface); color: var(--text); font-size:0.76rem; padding:0.25rem 0.35rem; outline:none; max-width:110px; }
+  .tag-select:focus { border-color: var(--accent); }
+  .fixed-tag-cell { display:flex; justify-content:flex-end; align-items:center; }
+
   footer { text-align: center; font-size: 0.75rem; color: var(--text-muted); padding: 1.5rem; border-top: 0.5px solid var(--border); letter-spacing: 0.03em; }
 
   @media (max-width: 620px) {
+    .tag-summary { grid-template-columns: 1fr 1fr; }
     .kpi-strip { grid-template-columns: 1fr 1fr; }
     .kpi:last-child { grid-column: 1 / -1; }
     .grid { grid-template-columns: 1fr; }
     .progress-bar-bg { width: 70px; }
-    .var-row { grid-template-columns: 1.5rem 1fr 95px; }
+    .var-row { grid-template-columns: 1.5rem 1fr 90px; }
+    .var-row .tag-select { grid-column: 2 / -1; max-width: 100%; }
+    .fixed-item { grid-template-columns: 1fr auto; }
+    .fixed-tag-cell { grid-column: 1 / -1; justify-content:flex-start; }
+    .tag-select { max-width: 100%; }
   }
 </style>
 </head>
@@ -176,6 +200,15 @@
       <div class="kpi-unit">euros em dívida</div>
     </div>
   </div>
+
+  <div class="tag-toolbar" aria-label="Filtrar despesas fixas por tag">
+    <span class="tag-toolbar-label">Filtrar fixas</span>
+    <button class="tag-filter-btn active" data-filter="all" onclick="setFixedTagFilter('all')">Todos</button>
+    <button class="tag-filter-btn" data-filter="Guilherme" onclick="setFixedTagFilter('Guilherme')">Guilherme</button>
+    <button class="tag-filter-btn" data-filter="Maysa" onclick="setFixedTagFilter('Maysa')">Maysa</button>
+    <button class="tag-filter-btn" data-filter="QDB" onclick="setFixedTagFilter('QDB')">QDB</button>
+  </div>
+  <div class="tag-summary" id="fixed-tag-summary"></div>
 
   <div class="grid">
     <div class="card">
@@ -245,6 +278,15 @@
     <span class="save-badge" id="save-badge">Guardado ✓</span>
   </div>
 
+  <div class="tag-toolbar" aria-label="Filtrar despesas variáveis por tag">
+    <span class="tag-toolbar-label">Filtrar variáveis</span>
+    <button class="tag-filter-btn active" data-var-filter="all" onclick="setVariableTagFilter('all')">Todos</button>
+    <button class="tag-filter-btn" data-var-filter="Guilherme" onclick="setVariableTagFilter('Guilherme')">Guilherme</button>
+    <button class="tag-filter-btn" data-var-filter="Maysa" onclick="setVariableTagFilter('Maysa')">Maysa</button>
+    <button class="tag-filter-btn" data-var-filter="QDB" onclick="setVariableTagFilter('QDB')">QDB</button>
+  </div>
+  <div class="tag-summary" id="variable-tag-summary"></div>
+
   <!-- Two column layout: entry left, charts right -->
   <div class="grid" style="align-items:start">
 
@@ -286,13 +328,15 @@
 </main>
 </div>
 
-<footer>Orçamento Familiar · Dados guardados no navegador</footer>
+<footer>Orçamento Familiar · Dados sincronizados com Google Sheets</footer>
 
 <script>
 // ─── STORAGE KEY ──────────────────────────────────────────────────────────────
 const STORAGE_KEY = 'orcamento_v2';
 const FIXED_KEY   = 'orcamento_fixas_v2';
 const DEBTS_KEY   = 'orcamento_dividas_v2';
+
+// ─── GOOGLE SHEETS SYNC ───────────────────────────────────────────────────────
 window.API_URL = "https://script.google.com/macros/s/AKfycbxFqbW0iiVjINC63S94nCyGgy0b5LBnr9iQATBpuPvUk5e4TLEGj6q0YAQUhQaXTHs/exec";
 
 window.carregarDadosSheet = function() {
@@ -325,26 +369,88 @@ window.guardarDadosSheet = async function(novaLinha) {
   console.log("Linha enviada para o Google Sheets:", novaLinha);
 };
 
+const syncTimers = {};
+function debounceSheetSave(key, payload, delay = 700) {
+  clearTimeout(syncTimers[key]);
+  syncTimers[key] = setTimeout(() => {
+    if (window.guardarDadosSheet) window.guardarDadosSheet(payload);
+  }, delay);
+}
+
+// ─── TAGS ─────────────────────────────────────────────────────────────────────
+const TAGS = ['Guilherme', 'Maysa', 'QDB'];
+let fixedTagFilter = 'all';
+let variableTagFilter = 'all';
+
+function normaliseTag(tag) {
+  return TAGS.includes(tag) ? tag : 'QDB';
+}
+
+function tagClass(tag) {
+  return String(tag || 'total').toLowerCase();
+}
+
+function tagSelectHTML(value, attrs = '') {
+  const current = normaliseTag(value);
+  return `<select class="tag-select" ${attrs}>
+    ${TAGS.map(t => `<option value="${t}" ${t === current ? 'selected' : ''}>${t}</option>`).join('')}
+  </select>`;
+}
+
+function renderTagSummary(containerId, totals) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const total = Object.values(totals).reduce((s, v) => s + (+v || 0), 0);
+  const rows = [
+    { label: 'Total', value: total, cls: 'total' },
+    { label: 'Guilherme', value: totals.Guilherme || 0, cls: 'guilherme' },
+    { label: 'Maysa', value: totals.Maysa || 0, cls: 'maysa' },
+    { label: 'QDB', value: totals.QDB || 0, cls: 'qdb' },
+  ];
+
+  container.innerHTML = rows.map(r => `
+    <div class="tag-card ${r.cls}">
+      <div class="tag-card-label">${r.label}</div>
+      <div class="tag-card-value">${fmt(r.value)} €</div>
+    </div>
+  `).join('');
+}
+
+function setFixedTagFilter(tag) {
+  fixedTagFilter = tag;
+  document.querySelectorAll('[data-filter]').forEach(btn => btn.classList.toggle('active', btn.dataset.filter === tag));
+  renderFixedTab();
+  updateVarKPIs(loadMonth(currentYear, currentMonth));
+  updateVarInsight(loadMonth(currentYear, currentMonth));
+}
+
+function setVariableTagFilter(tag) {
+  variableTagFilter = tag;
+  document.querySelectorAll('[data-var-filter]').forEach(btn => btn.classList.toggle('active', btn.dataset.varFilter === tag));
+  renderVariableMonth();
+}
 
 // ─── DEFAULT FIXED DATA ───────────────────────────────────────────────────────
 const DEFAULT_EXPENSES = [
-  { label: 'Carro', amount: 300 },
-  { label: 'CF membership', amount: 70 },
-  { label: 'Natação', amount: 60 },
-  { label: 'CGD', amount: 1102 },
-  { label: 'Ikea (prestação)', amount: 128.16 },
-  { label: 'Endesa', amount: 24.51 },
-  { label: 'Fidelidade (1)', amount: 30 },
-  { label: 'Epal', amount: 40 },
-  { label: 'Fidelidade (2)', amount: 23 },
-  { label: 'Seguro Saúde', amount: 59 },
-  { label: 'NOS Internet', amount: 40 },
+  { label: 'Carro', amount: 300, tag: 'Guilherme' },
+  { label: 'CF membership', amount: 70, tag: 'Guilherme' },
+  { label: 'Natação', amount: 60, tag: 'Guilherme' },
+  { label: 'CGD', amount: 1102, tag: 'QDB' },
+  { label: 'Ikea (prestação)', amount: 128.16, tag: 'QDB' },
+  { label: 'Endesa', amount: 24.51, tag: 'QDB' },
+  { label: 'Fidelidade (1)', amount: 30, tag: 'QDB' },
+  { label: 'Epal', amount: 40, tag: 'QDB' },
+  { label: 'Fidelidade (2)', amount: 23, tag: 'QDB' },
+  { label: 'Seguro Saúde', amount: 59, tag: 'QDB' },
+  { label: 'NOS Internet', amount: 40, tag: 'QDB' },
 ];
+
 const DEFAULT_DEBTS = [
-  { label: 'Ikea', amount: 3150.92 },
-  { label: 'Rute + HM', amount: 3500 },
-  { label: 'Pedro', amount: 2000 },
-  { label: 'Carro (estimativa)', amount: 10000 },
+  { label: 'Ikea', amount: 3150.92, tag: 'QDB' },
+  { label: 'Rute + HM', amount: 3500, tag: 'QDB' },
+  { label: 'Pedro', amount: 2000, tag: 'QDB' },
+  { label: 'Carro (estimativa)', amount: 10000, tag: 'Guilherme' },
 ];
 
 // ─── VARIABLE CATEGORIES ──────────────────────────────────────────────────────
@@ -352,33 +458,33 @@ const VAR_GROUPS = [
   {
     title: 'Santiago',
     cats: [
-      { key: 'med_santiago',    label: 'Médico Santiago',     icon: '🩺', color: '#3d9f6f' },
-      { key: 'farm_santiago',   label: 'Farmácia Santiago',   icon: '💊', color: '#3d9f6f' },
-      { key: 'compras_santiago',label: 'Compras Santiago',    icon: '🛍️', color: '#5b3d8f' },
-      { key: 'poup_santiago',   label: 'Poupança Santiago',   icon: '🐷', color: '#1a7a4a' },
+      { key: 'med_santiago',     label: 'Médico Santiago',          icon: '🩺', color: '#3d9f6f', defaultTag: 'QDB' },
+      { key: 'farm_santiago',    label: 'Farmácia Santiago',        icon: '💊', color: '#3d9f6f', defaultTag: 'QDB' },
+      { key: 'compras_santiago', label: 'Compras Santiago',         icon: '🛍️', color: '#5b3d8f', defaultTag: 'QDB' },
+      { key: 'poup_santiago',    label: 'Poupança Santiago',        icon: '🐷', color: '#1a7a4a', defaultTag: 'QDB' },
     ]
   },
   {
     title: 'Casa & vida',
     cats: [
-      { key: 'ferias',          label: 'Férias',              icon: '✈️', color: '#2a5f8f' },
-      { key: 'casa',            label: 'Casa',                icon: '🏠', color: '#6b8f3d' },
-      { key: 'supermercado',    label: 'Supermercado',        icon: '🛒', color: '#5b3d8f' },
-      { key: 'restauracao',     label: 'Restauração',         icon: '🍽️', color: '#c06020' },
+      { key: 'ferias',           label: 'Férias',                   icon: '✈️', color: '#2a5f8f', defaultTag: 'QDB' },
+      { key: 'casa',             label: 'Casa',                     icon: '🏠', color: '#6b8f3d', defaultTag: 'QDB' },
+      { key: 'supermercado',     label: 'Supermercado',             icon: '🛒', color: '#5b3d8f', defaultTag: 'QDB' },
+      { key: 'restauracao',      label: 'Restauração',              icon: '🍽️', color: '#c06020', defaultTag: 'QDB' },
     ]
   },
   {
     title: 'Poupança & partilhadas',
     cats: [
-      { key: 'poup_geral',      label: 'Poupança Geral',      icon: '💰', color: '#1a7a4a' },
-      { key: 'fixas_maysa_santiago', label: 'Fixas Maysa & Santiago', icon: '🏦', color: '#2a5f8f' },
+      { key: 'poup_geral',       label: 'Poupança Geral',           icon: '💰', color: '#1a7a4a', defaultTag: 'QDB' },
+      { key: 'fixas_maysa_santiago', label: 'Fixas Maysa & Santiago', icon: '🏦', color: '#2a5f8f', defaultTag: 'Maysa' },
     ]
   },
   {
     title: 'Quotidiano',
     cats: [
-      { key: 'transportes',     label: 'Transportes',         icon: '🚇', color: '#3d6bbf' },
-      { key: 'lazer',           label: 'Lazer',               icon: '🎬', color: '#b03060' },
+      { key: 'transportes',      label: 'Transportes',              icon: '🚇', color: '#3d6bbf', defaultTag: 'Guilherme' },
+      { key: 'lazer',            label: 'Lazer',                    icon: '🎬', color: '#b03060', defaultTag: 'Guilherme' },
     ]
   },
 ];
@@ -386,60 +492,101 @@ const VAR_GROUPS = [
 // ─── UTILS ────────────────────────────────────────────────────────────────────
 const MONTHS_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 function fmt(n) { return (+n||0).toLocaleString('pt-PT',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function allVarCats() { return VAR_GROUPS.flatMap(g => g.cats); }
+function findVarCat(key) { return allVarCats().find(c => c.key === key); }
 
 // ─── FIXED PERSISTENCE ────────────────────────────────────────────────────────
-function loadFixed()  { try { return JSON.parse(localStorage.getItem(FIXED_KEY)) || DEFAULT_EXPENSES.map(e=>({...e})); } catch { return DEFAULT_EXPENSES.map(e=>({...e})); } }
-function saveFixed(d) {
-  localStorage.setItem(FIXED_KEY, JSON.stringify(d));
+function normalizeFixedArray(arr, defaults) {
+  const base = Array.isArray(arr) && arr.length ? arr : defaults.map(e => ({...e}));
+  return base.map((e, i) => ({
+    label: e.label || defaults[i]?.label || 'Sem nome',
+    amount: +e.amount || 0,
+    tag: normaliseTag(e.tag || defaults[i]?.tag || 'QDB')
+  }));
+}
 
-  window.guardarDadosSheet({
+function loadFixed()  {
+  try { return normalizeFixedArray(JSON.parse(localStorage.getItem(FIXED_KEY)), DEFAULT_EXPENSES); }
+  catch { return DEFAULT_EXPENSES.map(e=>({...e})); }
+}
+
+function saveFixed(d) {
+  const normalized = normalizeFixedArray(d, DEFAULT_EXPENSES);
+  localStorage.setItem(FIXED_KEY, JSON.stringify(normalized));
+
+  debounceSheetSave('fixed', {
     date: new Date().toISOString(),
     type: "fixed_expenses",
     year: "",
     month: "",
+    tag: fixedTagFilter,
     category: "Despesas Fixas",
-    description: "Atualização de despesas fixas",
-    amount: "",
+    description: "Atualização de despesas fixas por tags",
+    amount: fixedTotal('all', normalized),
     status: "updated",
-    notes: JSON.stringify(d)
+    notes: JSON.stringify(normalized)
   });
 }
-function loadDebts()  { try { return JSON.parse(localStorage.getItem(DEBTS_KEY)) || DEFAULT_DEBTS.map(d=>({...d})); } catch { return DEFAULT_DEBTS.map(d=>({...d})); } }
-function saveDebts(d) {
-  localStorage.setItem(DEBTS_KEY, JSON.stringify(d));
 
-  window.guardarDadosSheet({
+function loadDebts()  {
+  try { return normalizeFixedArray(JSON.parse(localStorage.getItem(DEBTS_KEY)), DEFAULT_DEBTS); }
+  catch { return DEFAULT_DEBTS.map(d=>({...d})); }
+}
+
+function saveDebts(d) {
+  const normalized = normalizeFixedArray(d, DEFAULT_DEBTS);
+  localStorage.setItem(DEBTS_KEY, JSON.stringify(normalized));
+
+  debounceSheetSave('debts', {
     date: new Date().toISOString(),
     type: "debts",
     year: "",
     month: "",
+    tag: "all",
     category: "Dívidas",
-    description: "Atualização de dívidas",
-    amount: "",
+    description: "Atualização de dívidas por tags",
+    amount: normalized.reduce((s,d)=>s+(+d.amount||0),0),
     status: "updated",
-    notes: JSON.stringify(d)
+    notes: JSON.stringify(normalized)
   });
 }
 
 let fixedDonutChart = null, fixedBarChart = null;
 
-function fixedTotal() { return loadFixed().reduce((s,e)=>s+(+e.amount||0),0); }
+function fixedTotal(tag = 'all', source = null) {
+  const expenses = source || loadFixed();
+  return expenses
+    .filter(e => tag === 'all' || e.tag === tag)
+    .reduce((s,e)=>s+(+e.amount||0),0);
+}
+
+function fixedTagTotals(source = null) {
+  const expenses = source || loadFixed();
+  return TAGS.reduce((acc, tag) => {
+    acc[tag] = expenses.filter(e => e.tag === tag).reduce((s, e) => s + (+e.amount || 0), 0);
+    return acc;
+  }, {});
+}
 
 function renderFixedTab() {
   const expenses = loadFixed();
   const debts    = loadDebts();
-  const total    = expenses.reduce((s,e)=>s+(+e.amount||0),0);
+  const visibleExpenses = expenses.filter(e => fixedTagFilter === 'all' || e.tag === fixedTagFilter);
+  const totalAll = fixedTotal('all', expenses);
+  const totalVisible = fixedTotal(fixedTagFilter, expenses);
   const debtTotal= debts.reduce((s,d)=>s+(+d.amount||0),0);
 
-  document.getElementById('kpi-monthly').textContent = fmt(total) + ' €';
-  document.getElementById('kpi-annual').textContent  = fmt(total*12) + ' €';
+  document.getElementById('kpi-monthly').textContent = fmt(totalVisible) + ' €';
+  document.getElementById('kpi-annual').textContent  = fmt(totalVisible*12) + ' €';
   document.getElementById('kpi-debt').textContent    = fmt(debtTotal) + ' €';
+  renderTagSummary('fixed-tag-summary', fixedTagTotals(expenses));
 
   // Fixed editable list
   const list = document.getElementById('fixed-list');
   list.innerHTML = '';
-  expenses.forEach((e, i) => {
-    const pct = total > 0 ? (e.amount/total*100).toFixed(1) : 0;
+  visibleExpenses.forEach((e) => {
+    const i = expenses.indexOf(e);
+    const pct = totalVisible > 0 ? (e.amount/totalVisible*100).toFixed(1) : 0;
     const li = document.createElement('li');
     li.className = 'fixed-item';
     li.dataset.idx = i;
@@ -449,12 +596,19 @@ function renderFixedTab() {
         <input class="fixed-amt-input" type="number" min="0" step="0.01" value="${e.amount}" data-idx="${i}" data-field="amount" aria-label="Valor" />
         <span style="font-size:0.75rem;color:var(--text-muted)">€</span>
       </div>
+      <div class="fixed-tag-cell">
+        ${tagSelectHTML(e.tag, `data-idx="${i}" data-field="tag" aria-label="Tag da despesa"`)}
+      </div>
       <div class="fixed-bar-bg"><div class="fixed-bar-fill" style="width:${pct}%"></div></div>
     `;
     list.appendChild(li);
   });
 
-  list.querySelectorAll('input').forEach(inp => inp.addEventListener('input', onFixedInput));
+  if (!visibleExpenses.length) {
+    list.innerHTML = '<li style="color:var(--text-muted);font-size:0.85rem;padding:0.75rem 0">Sem despesas nesta tag.</li>';
+  }
+
+  list.querySelectorAll('input, select').forEach(inp => { inp.addEventListener('input', onFixedInput); inp.addEventListener('change', onFixedInput); });
 
   // Debt list
   const dc = document.getElementById('debt-list');
@@ -463,7 +617,7 @@ function renderFixedTab() {
     const pct = debtTotal > 0 ? (d.amount/debtTotal*100).toFixed(1) : 0;
     const div = document.createElement('div');
     div.className = 'debt-item';
-    div.innerHTML = `<div class="debt-name">${d.label}</div><div style="text-align:right"><div class="debt-amount">${fmt(d.amount)} €</div><div class="debt-pct">${pct}% do total</div></div>`;
+    div.innerHTML = `<div class="debt-name">${d.label} <span class="month-chip">${d.tag}</span></div><div style="text-align:right"><div class="debt-amount">${fmt(d.amount)} €</div><div class="debt-pct">${pct}% do total</div></div>`;
     dc.appendChild(div);
   });
 
@@ -474,12 +628,12 @@ function renderFixedTab() {
     const pct = debtTotal > 0 ? (d.amount/debtTotal*100).toFixed(1) : 0;
     const row = document.createElement('div');
     row.className = 'progress-row';
-    row.innerHTML = `<div class="progress-name">${d.label}</div><div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${pct}%"></div></div><div class="progress-pct">${pct}%</div>`;
+    row.innerHTML = `<div class="progress-name">${d.label} <span class="month-chip">${d.tag}</span></div><div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${pct}%"></div></div><div class="progress-pct">${pct}%</div>`;
     prog.appendChild(row);
   });
 
-  // Insight
-  document.getElementById('insight').innerHTML = `<strong>Resumo:</strong> As despesas fixas mensais são de <strong>${fmt(total)} €</strong> (${fmt(total*12)} €/ano). O total de dívidas em aberto é <strong>${fmt(debtTotal)} €</strong> — equivalente a <strong>${(debtTotal/total).toFixed(1)} meses</strong> de despesas fixas.`;
+  const filterText = fixedTagFilter === 'all' ? 'todas as tags' : `tag <strong>${fixedTagFilter}</strong>`;
+  document.getElementById('insight').innerHTML = `<strong>Resumo:</strong> As despesas fixas mensais filtradas por ${filterText} são de <strong>${fmt(totalVisible)} €</strong> (${fmt(totalVisible*12)} €/ano). O total acumulado de todas as tags é <strong>${fmt(totalAll)} €</strong>. O total de dívidas em aberto é <strong>${fmt(debtTotal)} €</strong>.`;
 
   // Charts
   const palette = ['#2a5f8f','#3a80b5','#5a9fd4','#7abce8','#a0d0f0','#b8dff5','#ceeafc','#e0f3ff','#f0f8ff','#fafcff'];
@@ -488,14 +642,14 @@ function renderFixedTab() {
   if (fixedDonutChart) fixedDonutChart.destroy();
   fixedDonutChart = new Chart(document.getElementById('donutChart').getContext('2d'), {
     type: 'doughnut',
-    data: { labels: expenses.map(e=>e.label), datasets: [{ data: expenses.map(e=>+e.amount||0), backgroundColor: palette, borderWidth: 2, borderColor: '#fff' }] },
+    data: { labels: visibleExpenses.map(e=>`${e.label} · ${e.tag}`), datasets: [{ data: visibleExpenses.map(e=>+e.amount||0), backgroundColor: palette, borderWidth: 2, borderColor: '#fff' }] },
     options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { display: false }, tooltip: { callbacks: { label: c=>` ${c.label}: ${fmt(c.parsed)} €` } } } }
   });
 
   if (fixedBarChart) fixedBarChart.destroy();
   fixedBarChart = new Chart(document.getElementById('barChart').getContext('2d'), {
     type: 'bar',
-    data: { labels: debts.map(d=>d.label), datasets: [{ data: debts.map(d=>+d.amount||0), backgroundColor: dangerPalette, borderRadius: 4, borderSkipped: false }] },
+    data: { labels: debts.map(d=>`${d.label} · ${d.tag}`), datasets: [{ data: debts.map(d=>+d.amount||0), backgroundColor: dangerPalette, borderRadius: 4, borderSkipped: false }] },
     options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false }, tooltip: { callbacks: { label: c=>` ${fmt(c.parsed.x)} €` } } }, scales: { x: { ticks: { callback: v=>fmt(v)+' €', font:{size:10}, color:'#6b6560', maxTicksLimit:5 }, grid:{color:'rgba(26,23,20,0.06)'} }, y: { ticks:{font:{size:11},color:'#1a1714'}, grid:{display:false} } } }
   });
 }
@@ -504,63 +658,105 @@ function onFixedInput(e) {
   const expenses = loadFixed();
   const i = +e.target.dataset.idx;
   const field = e.target.dataset.field;
-  expenses[i][field] = field === 'amount' ? parseFloat(e.target.value)||0 : e.target.value;
+  expenses[i][field] = field === 'amount' ? parseFloat(e.target.value)||0 : field === 'tag' ? normaliseTag(e.target.value) : e.target.value;
   saveFixed(expenses);
-  // Refresh totals + bars without full re-render
-  const total = expenses.reduce((s,ex)=>s+(+ex.amount||0),0);
-  document.getElementById('kpi-monthly').textContent = fmt(total) + ' €';
-  document.getElementById('kpi-annual').textContent  = fmt(total*12) + ' €';
-  // Update bar widths
-  document.querySelectorAll('.fixed-item').forEach((li, idx) => {
-    const pct = total > 0 ? ((+expenses[idx].amount||0)/total*100).toFixed(1) : 0;
+
+  // A tag change can move the row out of the active filter, so full re-render is safer.
+  if (field === 'tag') {
+    renderFixedTab();
+    renderVariableMonth();
+    return;
+  }
+
+  const totalVisible = fixedTotal(fixedTagFilter, expenses);
+  const totalAll = fixedTotal('all', expenses);
+  document.getElementById('kpi-monthly').textContent = fmt(totalVisible) + ' €';
+  document.getElementById('kpi-annual').textContent  = fmt(totalVisible*12) + ' €';
+  renderTagSummary('fixed-tag-summary', fixedTagTotals(expenses));
+
+  document.querySelectorAll('.fixed-item').forEach((li) => {
+    const idx = +li.dataset.idx;
+    const pct = totalVisible > 0 ? ((+expenses[idx].amount||0)/totalVisible*100).toFixed(1) : 0;
     const fill = li.querySelector('.fixed-bar-fill');
     if (fill) fill.style.width = pct + '%';
   });
-  // Update insight
+
   const debtTotal = loadDebts().reduce((s,d)=>s+(+d.amount||0),0);
-  document.getElementById('insight').innerHTML = `<strong>Resumo:</strong> As despesas fixas mensais são de <strong>${fmt(total)} €</strong> (${fmt(total*12)} €/ano). O total de dívidas em aberto é <strong>${fmt(debtTotal)} €</strong> — equivalente a <strong>${(debtTotal/total).toFixed(1)} meses</strong> de despesas fixas.`;
-  // Refresh donut
+  const filterText = fixedTagFilter === 'all' ? 'todas as tags' : `tag <strong>${fixedTagFilter}</strong>`;
+  document.getElementById('insight').innerHTML = `<strong>Resumo:</strong> As despesas fixas mensais filtradas por ${filterText} são de <strong>${fmt(totalVisible)} €</strong> (${fmt(totalVisible*12)} €/ano). O total acumulado de todas as tags é <strong>${fmt(totalAll)} €</strong>. O total de dívidas em aberto é <strong>${fmt(debtTotal)} €</strong>.`;
+
   if (fixedDonutChart) {
-    fixedDonutChart.data.labels = expenses.map(ex=>ex.label);
-    fixedDonutChart.data.datasets[0].data = expenses.map(ex=>+ex.amount||0);
+    const visibleExpenses = expenses.filter(e => fixedTagFilter === 'all' || e.tag === fixedTagFilter);
+    fixedDonutChart.data.labels = visibleExpenses.map(ex=>`${ex.label} · ${ex.tag}`);
+    fixedDonutChart.data.datasets[0].data = visibleExpenses.map(ex=>+ex.amount||0);
     fixedDonutChart.update();
   }
-  // Keep variable tab fixed KPI in sync
-  document.getElementById('v-kpi-fixed').textContent = fmt(total) + ' €';
+
+  document.getElementById('v-kpi-fixed').textContent = fmt(fixedTotal(fixedTagFilter, expenses)) + ' €';
+  updateVarKPIs(loadMonth(currentYear, currentMonth));
+  updateVarInsight(loadMonth(currentYear, currentMonth));
 }
 
 function addFixedItem() {
   const expenses = loadFixed();
-  expenses.push({ label: 'Nova despesa', amount: 0 });
+  expenses.push({ label: 'Nova despesa', amount: 0, tag: fixedTagFilter === 'all' ? 'QDB' : fixedTagFilter });
   saveFixed(expenses);
   renderFixedTab();
-  // Focus the new label input
   const inputs = document.querySelectorAll('.fixed-name-input');
   if (inputs.length) inputs[inputs.length-1].focus();
 }
 
 // ─── VARIABLE PERSISTENCE ─────────────────────────────────────────────────────
 function varKey(y,m) { return `${STORAGE_KEY}_${y}_${String(m).padStart(2,'0')}`; }
-function loadMonth(y,m) { try { return JSON.parse(localStorage.getItem(varKey(y,m)))||{cats:{}}; } catch { return {cats:{}}; } }
-function saveMonth(y,m,data) {
-  localStorage.setItem(varKey(y,m), JSON.stringify(data));
 
-  window.guardarDadosSheet({
+function normalizeMonthData(data) {
+  const normalized = { cats: {} };
+  const source = data && data.cats ? data.cats : {};
+  allVarCats().forEach(cat => {
+    const raw = source[cat.key];
+
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+      normalized.cats[cat.key] = {
+        amount: raw.amount === '' ? '' : (+raw.amount || 0),
+        tag: normaliseTag(raw.tag || cat.defaultTag)
+      };
+    } else {
+      normalized.cats[cat.key] = {
+        amount: raw === undefined || raw === null ? '' : raw,
+        tag: normaliseTag(cat.defaultTag)
+      };
+    }
+  });
+  return normalized;
+}
+
+function loadMonth(y,m) {
+  try { return normalizeMonthData(JSON.parse(localStorage.getItem(varKey(y,m)))||{cats:{}}); }
+  catch { return normalizeMonthData({cats:{}}); }
+}
+
+function saveMonth(y,m,data) {
+  const normalized = normalizeMonthData(data);
+  localStorage.setItem(varKey(y,m), JSON.stringify(normalized));
+
+  debounceSheetSave(`variable_${y}_${m}`, {
     date: new Date().toISOString(),
     type: "variable_month",
     year: y,
     month: m,
+    tag: variableTagFilter,
     category: "Despesas Variáveis",
     description: `Atualização de variáveis - ${String(m).padStart(2,'0')}/${y}`,
-    amount: monthTotal(data),
+    amount: monthTotal(normalized, 'all'),
     status: "updated",
-    notes: JSON.stringify(data)
+    notes: JSON.stringify(normalized)
   });
 
   const b = document.getElementById('save-badge');
   b.classList.add('show');
   setTimeout(()=>b.classList.remove('show'),1800);
 }
+
 function getAllVarMonths() {
   const res=[];
   for(let i=0;i<localStorage.length;i++){
@@ -571,12 +767,36 @@ function getAllVarMonths() {
     if(parts.length!==2) continue;
     const [y,m]=[+parts[0],+parts[1]];
     if(!y||!m) continue;
-    try { res.push({y,m,data:JSON.parse(localStorage.getItem(k))||{cats:{}}}); } catch{}
+    try { res.push({y,m,data:normalizeMonthData(JSON.parse(localStorage.getItem(k))||{cats:{}})}); } catch{}
   }
   return res.sort((a,b)=>a.y!==b.y?a.y-b.y:a.m-b.m);
 }
-function monthTotal(data) {
-  return Object.values(data.cats||{}).reduce((s,v)=>s+(+v||0),0);
+
+function catAmount(entry) {
+  if (entry && typeof entry === 'object') return +entry.amount || 0;
+  return +entry || 0;
+}
+
+function catTag(entry, cat) {
+  if (entry && typeof entry === 'object') return normaliseTag(entry.tag || cat.defaultTag);
+  return normaliseTag(cat.defaultTag);
+}
+
+function monthTotal(data, tag = 'all') {
+  const normalized = normalizeMonthData(data);
+  return allVarCats().reduce((sum, cat) => {
+    const entry = normalized.cats[cat.key];
+    if (tag !== 'all' && catTag(entry, cat) !== tag) return sum;
+    return sum + catAmount(entry);
+  }, 0);
+}
+
+function variableTagTotals(data) {
+  const normalized = normalizeMonthData(data);
+  return TAGS.reduce((acc, tag) => {
+    acc[tag] = monthTotal(normalized, tag);
+    return acc;
+  }, {});
 }
 
 let currentYear, currentMonth;
@@ -603,24 +823,32 @@ function renderVariableMonth() {
   const prevY = currentMonth===1?currentYear-1:currentYear;
   const prevData = loadMonth(prevY,prevM);
 
-  // Fixed KPI
-  const ft = fixedTotal();
+  const ft = fixedTotal(fixedTagFilter);
   document.getElementById('v-kpi-fixed').textContent = fmt(ft)+' €';
 
-  // Entry panel
   const entry = document.getElementById('var-entry');
   entry.innerHTML='';
 
   VAR_GROUPS.forEach(group=>{
+    const visibleCats = group.cats.filter(cat => {
+      const entry = data.cats[cat.key];
+      return variableTagFilter === 'all' || catTag(entry, cat) === variableTagFilter;
+    });
+
+    if (!visibleCats.length) return;
+
     const title = document.createElement('div');
     title.className='var-section-title';
     title.textContent=group.title;
     entry.appendChild(title);
 
-    group.cats.forEach(cat=>{
-      const val = data.cats[cat.key]||'';
-      const prevVal = prevData.cats[cat.key];
-      const prevText = prevVal ? `Anterior: ${fmt(+prevVal)} €` : '';
+    visibleCats.forEach(cat=>{
+      const current = data.cats[cat.key] || { amount: '', tag: cat.defaultTag };
+      const val = current.amount ?? '';
+      const currentTag = catTag(current, cat);
+      const prevEntry = prevData.cats[cat.key];
+      const prevVal = catAmount(prevEntry);
+      const prevText = prevVal ? `Anterior: ${fmt(prevVal)} € · ${catTag(prevEntry, cat)}` : '';
 
       const row=document.createElement('div');
       row.className='var-row';
@@ -632,14 +860,19 @@ function renderVariableMonth() {
         </div>
         <div class="var-input-wrap">
           <input class="var-input" type="number" min="0" step="0.01" placeholder="0,00"
-            value="${val}" data-key="${cat.key}" aria-label="${cat.label}" />
+            value="${val}" data-key="${cat.key}" data-field="amount" aria-label="${cat.label}" />
           <span class="var-currency">€</span>
         </div>
+        ${tagSelectHTML(currentTag, `data-key="${cat.key}" data-field="tag" aria-label="Tag de ${cat.label}"`)}
       `;
-      row.querySelector('input').addEventListener('input', onVarInput);
+      row.querySelectorAll('input, select').forEach(el => { el.addEventListener('input', onVarInput); el.addEventListener('change', onVarInput); });
       entry.appendChild(row);
     });
   });
+
+  if (!entry.innerHTML) {
+    entry.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;padding:0.75rem 0">Sem categorias nesta tag.</div>';
+  }
 
   updateVarKPIs(data);
   renderVarCharts(data);
@@ -649,8 +882,27 @@ function renderVariableMonth() {
 
 function onVarInput(e) {
   const data=loadMonth(currentYear,currentMonth);
-  data.cats[e.target.dataset.key]=e.target.value;
+  const key = e.target.dataset.key;
+  const field = e.target.dataset.field;
+  const cat = findVarCat(key);
+  const current = data.cats[key] && typeof data.cats[key] === 'object'
+    ? data.cats[key]
+    : { amount: data.cats[key] || '', tag: cat?.defaultTag || 'QDB' };
+
+  if (field === 'tag') {
+    current.tag = normaliseTag(e.target.value);
+  } else {
+    current.amount = e.target.value;
+  }
+
+  data.cats[key] = current;
   saveMonth(currentYear,currentMonth,data);
+
+  if (field === 'tag') {
+    renderVariableMonth();
+    return;
+  }
+
   updateVarKPIs(data);
   renderVarCharts(data);
   renderHistory();
@@ -658,18 +910,25 @@ function onVarInput(e) {
 }
 
 function updateVarKPIs(data) {
-  const vt=monthTotal(data);
-  const ft=fixedTotal();
+  const vt=monthTotal(data, variableTagFilter);
+  const ft=fixedTotal(fixedTagFilter);
   document.getElementById('v-kpi-month').textContent=fmt(vt)+' €';
   document.getElementById('v-kpi-total').textContent=fmt(ft+vt)+' €';
+  renderTagSummary('variable-tag-summary', variableTagTotals(data));
 }
 
 function renderVarCharts(data) {
-  const allCats = VAR_GROUPS.flatMap(g=>g.cats);
+  const normalized = normalizeMonthData(data);
   const labels=[], amounts=[], colors=[];
-  allCats.forEach(cat=>{
-    const v=+data.cats[cat.key]||0;
-    if(v>0){labels.push(cat.label);amounts.push(v);colors.push(cat.color);}
+  allVarCats().forEach(cat=>{
+    const entry = normalized.cats[cat.key];
+    const v=catAmount(entry);
+    const tag=catTag(entry, cat);
+    if(v>0 && (variableTagFilter === 'all' || tag === variableTagFilter)){
+      labels.push(`${cat.label} · ${tag}`);
+      amounts.push(v);
+      colors.push(cat.color);
+    }
   });
 
   if(varDonutChart) varDonutChart.destroy();
@@ -679,13 +938,12 @@ function renderVarCharts(data) {
     options:{responsive:true,maintainAspectRatio:false,cutout:'58%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.label}: ${fmt(c.parsed)} €`}}}}
   });
 
-  // Line — last 6 months
   const lineMonths=[],lineTotals=[];
   for(let i=5;i>=0;i--){
     let y=currentYear,m=currentMonth-i;
     while(m<1){m+=12;y--;}
     lineMonths.push(MONTHS_PT[m-1].slice(0,3)+' '+String(y).slice(2));
-    lineTotals.push(monthTotal(loadMonth(y,m)));
+    lineTotals.push(monthTotal(loadMonth(y,m), variableTagFilter));
   }
   if(varLineChart) varLineChart.destroy();
   varLineChart=new Chart(document.getElementById('varLine').getContext('2d'),{
@@ -698,14 +956,17 @@ function renderVarCharts(data) {
 function renderHistory() {
   const body=document.getElementById('history-body');
   body.innerHTML='';
-  const all=getAllVarMonths().filter(({data:d})=>monthTotal(d)>0);
+  const all=getAllVarMonths().filter(({data:d})=>monthTotal(d, variableTagFilter)>0);
   if(!all.length){
-    body.innerHTML='<tr><td colspan="3" style="color:var(--text-muted);font-size:0.85rem;padding:1rem 0">Ainda sem dados. Começa a preencher este mês!</td></tr>';
+    body.innerHTML='<tr><td colspan="3" style="color:var(--text-muted);font-size:0.85rem;padding:1rem 0">Ainda sem dados nesta tag. Começa a preencher este mês!</td></tr>';
     return;
   }
   [...all].reverse().forEach(({y,m,data:d})=>{
-    const total=monthTotal(d);
-    const catCount=Object.values(d.cats||{}).filter(v=>+v>0).length;
+    const total=monthTotal(d, variableTagFilter);
+    const catCount=allVarCats().filter(cat => {
+      const entry = d.cats[cat.key];
+      return catAmount(entry)>0 && (variableTagFilter === 'all' || catTag(entry, cat) === variableTagFilter);
+    }).length;
     const tr=document.createElement('tr');
     tr.innerHTML=`<td><span class="month-chip">${MONTHS_PT[m-1]} ${y}</span></td><td style="color:var(--text-muted)">${catCount} categoria${catCount!==1?'s':''}</td><td>${fmt(total)} €</td>`;
     body.appendChild(tr);
@@ -713,22 +974,23 @@ function renderHistory() {
 }
 
 function updateVarInsight(data) {
-  const vt=monthTotal(data);
-  const ft=fixedTotal();
+  const vt=monthTotal(data, variableTagFilter);
+  const ft=fixedTotal(fixedTagFilter);
   const grand=ft+vt;
   const pct=grand>0?(vt/grand*100).toFixed(0):0;
-  const all=getAllVarMonths().filter(({data:d})=>monthTotal(d)>0);
+  const all=getAllVarMonths().filter(({data:d})=>monthTotal(d, variableTagFilter)>0);
   let avgText='';
   if(all.length>1){
-    const avg=all.reduce((s,{data:d})=>s+monthTotal(d),0)/all.length;
+    const avg=all.reduce((s,{data:d})=>s+monthTotal(d, variableTagFilter),0)/all.length;
     const diff=vt-avg;
     avgText=diff>=0
-      ? ` Este mês gastaste <strong>${fmt(diff)} € a mais</strong> do que a tua média (${fmt(avg)} €).`
-      : ` Este mês gastaste <strong>${fmt(Math.abs(diff))} € a menos</strong> do que a tua média (${fmt(avg)} €).`;
+      ? ` Este mês gastaste <strong>${fmt(diff)} € a mais</strong> do que a tua média filtrada (${fmt(avg)} €).`
+      : ` Este mês gastaste <strong>${fmt(Math.abs(diff))} € a menos</strong> do que a tua média filtrada (${fmt(avg)} €).`;
   }
+  const tagText = variableTagFilter === 'all' ? 'todas as tags' : `tag <strong>${variableTagFilter}</strong>`;
   document.getElementById('var-insight').innerHTML=vt>0
-    ? `<strong>Este mês:</strong> Variáveis de <strong>${fmt(vt)} €</strong> representam <strong>${pct}%</strong> do total (<strong>${fmt(grand)} €</strong>).${avgText}`
-    : `<strong>Dica:</strong> Preenche os valores acima — ficam guardados automaticamente no navegador.`;
+    ? `<strong>Este mês:</strong> Variáveis de <strong>${fmt(vt)} €</strong> em ${tagText} representam <strong>${pct}%</strong> do total filtrado (<strong>${fmt(grand)} €</strong>).${avgText}`
+    : `<strong>Dica:</strong> Preenche os valores acima — ficam guardados automaticamente por mês e por tag.`;
 }
 
 // ─── TAB SWITCH ──────────────────────────────────────────────────────────────
@@ -741,9 +1003,13 @@ function switchTab(tab) {
 // ─── INIT ────────────────────────────────────────────────────────────────────
 renderFixedTab();
 initVariableTab();
+
 window.carregarDadosSheet().then(dados => {
   console.log("Ligação ao Google Sheets OK:", dados);
+}).catch(err => {
+  console.warn("Não foi possível ler o Google Sheets agora:", err);
 });
+
 </script>
 </body>
 </html>
