@@ -82,6 +82,13 @@
   .debt-name { color: var(--text); }
   .debt-amount { font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--danger); }
   .debt-pct { font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; text-align: right; }
+  .debt-edit-item { display: grid; grid-template-columns: 1fr 95px 115px; gap: 8px; align-items: center; padding: 0.55rem 0; border-bottom: 0.5px solid var(--border); }
+  .debt-edit-item:last-child { border-bottom: none; }
+  .debt-name-input { font-size: 0.875rem; color: var(--text); border: none; background: transparent; outline: none; width: 100%; border-bottom: 1px solid transparent; padding: 2px 0; }
+  .debt-name-input:focus { border-bottom-color: var(--danger); }
+  .debt-amt-input { font-size: 0.875rem; font-weight: 500; color: var(--danger); font-variant-numeric: tabular-nums; border: none; background: transparent; text-align: right; width: 80px; outline: none; border-bottom: 1px solid transparent; padding: 2px 0; }
+  .debt-amt-input:focus { border-bottom-color: var(--danger); }
+  .debt-tag-cell { display:flex; justify-content:flex-end; align-items:center; }
 
   /* PROGRESS */
   .progress-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0; font-size: 0.875rem; border-bottom: 0.5px solid var(--border); }
@@ -165,6 +172,8 @@
     .var-row .tag-select { grid-column: 2 / -1; max-width: 100%; }
     .fixed-item { grid-template-columns: 1fr auto; }
     .fixed-tag-cell { grid-column: 1 / -1; justify-content:flex-start; }
+    .debt-edit-item { grid-template-columns: 1fr 90px; }
+    .debt-tag-cell { grid-column: 1 / -1; justify-content:flex-start; }
     .tag-select { max-width: 100%; }
   }
 </style>
@@ -228,6 +237,7 @@
     <div class="card">
       <div class="card-title"><span class="dot" style="background:#c0392b"></span>Dívidas em aberto</div>
       <div id="debt-list"></div>
+      <button class="add-fixed-btn" onclick="addDebtItem()">＋ Adicionar dívida</button>
     </div>
     <div class="card">
       <div class="card-title"><span class="dot" style="background:#c0392b"></span>Peso de cada dívida</div>
@@ -450,7 +460,7 @@ const DEFAULT_DEBTS = [
   { label: 'Ikea', amount: 3150.92, tag: 'QDB' },
   { label: 'Rute + HM', amount: 3500, tag: 'QDB' },
   { label: 'Pedro', amount: 2000, tag: 'QDB' },
-  { label: 'Carro (estimativa)', amount: 10000, tag: 'Guilherme' },
+  { label: 'Carro (estimativa)', amount: 10000, tag: 'QDB' },
 ];
 
 // ─── VARIABLE CATEGORIES ──────────────────────────────────────────────────────
@@ -610,16 +620,27 @@ function renderFixedTab() {
 
   list.querySelectorAll('input, select').forEach(inp => { inp.addEventListener('input', onFixedInput); inp.addEventListener('change', onFixedInput); });
 
-  // Debt list
+  // Debt editable list
   const dc = document.getElementById('debt-list');
   dc.innerHTML = '';
-  debts.forEach(d => {
-    const pct = debtTotal > 0 ? (d.amount/debtTotal*100).toFixed(1) : 0;
+  debts.forEach((d, i) => {
     const div = document.createElement('div');
-    div.className = 'debt-item';
-    div.innerHTML = `<div class="debt-name">${d.label} <span class="month-chip">${d.tag}</span></div><div style="text-align:right"><div class="debt-amount">${fmt(d.amount)} €</div><div class="debt-pct">${pct}% do total</div></div>`;
+    div.className = 'debt-edit-item';
+    div.dataset.idx = i;
+    div.innerHTML = `
+      <input class="debt-name-input" type="text" value="${d.label}" data-debt-idx="${i}" data-field="label" aria-label="Nome da dívida" />
+      <div style="display:flex;align-items:center;gap:4px;justify-content:flex-end">
+        <input class="debt-amt-input" type="number" min="0" step="0.01" value="${d.amount}" data-debt-idx="${i}" data-field="amount" aria-label="Valor da dívida" />
+        <span style="font-size:0.75rem;color:var(--text-muted)">€</span>
+      </div>
+      <div class="debt-tag-cell">
+        ${tagSelectHTML(d.tag, `data-debt-idx="${i}" data-field="tag" aria-label="Owner da dívida"`)}
+      </div>
+    `;
     dc.appendChild(div);
   });
+
+  dc.querySelectorAll('input, select').forEach(inp => { inp.addEventListener('input', onDebtInput); inp.addEventListener('change', onDebtInput); });
 
   // Debt progress
   const prog = document.getElementById('debt-progress');
@@ -703,6 +724,32 @@ function addFixedItem() {
   saveFixed(expenses);
   renderFixedTab();
   const inputs = document.querySelectorAll('.fixed-name-input');
+  if (inputs.length) inputs[inputs.length-1].focus();
+}
+
+function onDebtInput(e) {
+  const debts = loadDebts();
+  const i = +e.target.dataset.debtIdx;
+  const field = e.target.dataset.field;
+  if (!debts[i]) return;
+
+  debts[i][field] = field === 'amount'
+    ? parseFloat(e.target.value) || 0
+    : field === 'tag'
+      ? normaliseTag(e.target.value)
+      : e.target.value;
+
+  saveDebts(debts);
+  renderFixedTab();
+  renderVariableMonth();
+}
+
+function addDebtItem() {
+  const debts = loadDebts();
+  debts.push({ label: 'Nova dívida', amount: 0, tag: 'QDB' });
+  saveDebts(debts);
+  renderFixedTab();
+  const inputs = document.querySelectorAll('.debt-name-input');
   if (inputs.length) inputs[inputs.length-1].focus();
 }
 
