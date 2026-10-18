@@ -177,7 +177,7 @@
   .budget-row { display:grid; grid-template-columns: 1.6rem 1fr auto; gap:4px 10px; align-items:center; padding:0.55rem 0; border-bottom:0.5px solid var(--border); font-size:0.85rem; }
   .budget-row:last-child { border-bottom:none; }
   .budget-row-name { color: var(--text); }
-  .budget-row-nums { font-variant-numeric: tabular-nums; color: var(--text-muted); font-size:0.78rem; text-align:right; white-space:nowrap; }
+  .budget-row-nums { font-variant-numeric: tabular-nums; color: var(--text-muted); font-size:0.75rem; margin-top:2px; }
   .budget-row-nums strong { color: var(--text); font-weight:600; }
   .budget-row-nums .over { color: var(--danger); font-weight:600; }
   .budget-row-bar { grid-column: 2 / -1; height:5px; background: var(--surface2); border-radius:99px; overflow:hidden; }
@@ -187,6 +187,10 @@
   .fill-over { background: var(--danger); }
   .budget-input { font-size:0.875rem; font-weight:500; color:var(--text); font-variant-numeric: tabular-nums; border:none; background:transparent; text-align:right; width:90px; outline:none; border-bottom:1px solid var(--border); padding:2px 0; }
   .budget-input:focus { border-bottom-color: var(--variable); }
+  .budget-row-items { font-size:0.68rem; color: var(--text-muted); margin-top:2px; line-height:1.4; }
+  .budget-link { display:inline-flex; align-items:center; gap:5px; margin-top:4px; font-size:0.66rem; color: var(--text-muted); }
+  .budget-link-select { border:0.5px solid var(--border); border-radius:6px; background: var(--surface); color: var(--text); font-size:0.7rem; padding:0.1rem 0.25rem; outline:none; }
+  .budget-link-select:focus { border-color: var(--success); }
   .budget-empty { color: var(--text-muted); font-size:0.85rem; padding:0.5rem 0 0.25rem; line-height:1.5; }
 
   footer { text-align: center; font-size: 0.75rem; color: var(--text-muted); padding: 1.5rem; border-top: 0.5px solid var(--border); letter-spacing: 0.03em; }
@@ -199,7 +203,7 @@
     .progress-bar-bg { width: 70px; }
     .budget-summary { grid-template-columns: 1fr 1fr; }
     .budget-summary .budget-stat:last-child { grid-column: 1 / -1; }
-    .budget-row-nums { grid-column: 2 / -1; text-align: left; white-space: normal; }
+    .budget-input { width: 60px; }
     .var-row { grid-template-columns: 1.5rem 1fr 90px; }
     .var-row .tag-select { grid-column: 2 / -1; max-width: 100%; }
     .fixed-item { grid-template-columns: 1fr auto; }
@@ -361,7 +365,7 @@
   <div class="card" style="margin-bottom:1.25rem">
     <div class="card-title budget-head">
       <span class="dot" style="background:#1a7a4a"></span>Orçamento do mês
-      <button class="budget-edit-btn" id="budget-edit-btn" onclick="toggleBudgetEdit()">Definir orçamento</button>
+      <span style="margin-left:auto;font-size:0.65rem;color:var(--text-muted);text-transform:none;letter-spacing:0">clica no valor para editar</span>
     </div>
     <div id="budget-card"></div>
   </div>
@@ -558,7 +562,8 @@ function normaliseCustomVar(item, i = 0) {
     amount: item?.amount === '' ? '' : (+item?.amount || 0),
     tag: normaliseTag(item?.tag || (variableTagFilter === 'all' ? 'QDB' : variableTagFilter)),
     color: item?.color || customVarColor(i),
-    icon: item?.icon || '➕'
+    icon: item?.icon || '➕',
+    budget: item?.budget || ''
   };
 }
 
@@ -970,6 +975,7 @@ function renderVariableMonth() {
         <div>
           <div class="var-label">${cat.label}</div>
           ${prevText?`<div class="var-prev">${prevText}</div>`:''}
+          ${budgetLinkSelectHTML(budgetBucketForCat(cat, current), `data-budget-cat="${cat.key}" aria-label="Orçamento de ${cat.label}"`)}
         </div>
         <div class="var-input-wrap">
           <input class="var-input" type="number" min="0" step="0.01" placeholder="0,00"
@@ -978,7 +984,8 @@ function renderVariableMonth() {
         </div>
         ${tagSelectHTML(currentTag, `data-key="${cat.key}" data-field="tag" aria-label="Tag de ${cat.label}"`)}
       `;
-      row.querySelectorAll('input, select').forEach(el => { el.addEventListener('input', onVarInput); el.addEventListener('change', onVarInput); });
+      row.querySelectorAll('input, select:not(.budget-link-select)').forEach(el => { el.addEventListener('input', onVarInput); el.addEventListener('change', onVarInput); });
+      row.querySelector('.budget-link-select').addEventListener('change', onBudgetLinkInput);
       entry.appendChild(row);
     });
   });
@@ -998,6 +1005,7 @@ function renderVariableMonth() {
         <div>
           <input class="var-custom-name-input" type="text" value="${item.label}" data-custom-id="${item.id}" data-field="label" aria-label="Nome da despesa variável personalizada" />
           <div class="var-prev">Personalizada</div>
+          ${budgetLinkSelectHTML(budgetBucketForCustom(item), `data-custom-id="${item.id}" data-field="budget" aria-label="Orçamento de ${item.label}"`)}
         </div>
         <div class="var-input-wrap">
           <input class="var-input" type="number" min="0" step="0.01" placeholder="0,00"
@@ -1062,12 +1070,20 @@ function onCustomVarInput(e) {
   if (field === 'amount') data.custom[idx].amount = e.target.value;
   else if (field === 'tag') data.custom[idx].tag = normaliseTag(e.target.value);
   else if (field === 'label') data.custom[idx].label = e.target.value || 'Nova despesa variável';
+  else if (field === 'budget') data.custom[idx].budget = e.target.value;
 
   saveMonth(currentYear, currentMonth, data);
 
   if (field === 'tag') {
     renderVariableMonth();
     return;
+  }
+  if (field === 'budget' || field === 'label') {
+    // a regra automática depende do nome: atualiza seletor e card
+    const sel = document.querySelector(`.budget-link-select[data-custom-id="${id}"]`);
+    if (sel && field === 'label') sel.value = budgetBucketForCustom(data.custom[idx]);
+    renderBudgetCard(data);
+    if (field === 'budget') return;
   }
 
   updateVarKPIs(data);
@@ -1187,10 +1203,66 @@ function updateVarInsight(data) {
     : `<strong>Dica:</strong> Preenche os valores acima — ficam guardados automaticamente por mês e por tag. Também podes adicionar despesas variáveis novas.`;
 }
 
-// ─── BUDGET (orçamento mensal por categoria, igual todos os meses) ──────────
-const BUDGET_KEY = 'orcamento_budget_v1';
-const BUDGET_CUSTOM_KEY = '__custom';
-let budgetEditMode = false;
+// ─── BUDGET (4 envelopes mensais, iguais todos os meses) ─────────────────────
+const BUDGET_KEY = 'orcamento_budget_v2';
+
+// Santiago = categorias do grupo Santiago (qualquer tag).
+// Restantes despesas variáveis vão para o envelope da sua tag.
+const BUDGET_BUCKETS = [
+  { key: 'santiago', label: 'Santiago',      icon: '👶' },
+  { key: 'qdb',      label: 'QDB',           icon: '🏠', tag: 'QDB' },
+  { key: 'gui',      label: 'Pessoal Gui',   icon: '🙋‍♂️', tag: 'Guilherme' },
+  { key: 'maysa',    label: 'Pessoal Maysa', icon: '🙋‍♀️', tag: 'Maysa' },
+];
+
+// Associação item → envelope. Categorias base: guardada globalmente (vale todos os meses).
+// Personalizadas: guardada no próprio item. Sem escolha = automático pela tag.
+const BUDGET_MAP_KEY = 'orcamento_budget_map_v1';
+const TAG_TO_BUCKET = { QDB: 'qdb', Guilherme: 'gui', Maysa: 'maysa' };
+
+function loadBudgetMap() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(BUDGET_MAP_KEY));
+    return raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  } catch { return {}; }
+}
+
+function validBucket(v) { return v === 'none' || BUDGET_BUCKETS.some(b => b.key === v); }
+
+// Regra automática: Guilherme → Pessoal Gui; Maysa → Pessoal Maysa;
+// QDB → Santiago se o nome tiver "Santiago", senão QDB.
+function autoBucket(tag, label) {
+  const t = normaliseTag(tag);
+  if (t === 'Guilherme') return 'gui';
+  if (t === 'Maysa') return 'maysa';
+  return /santiago/i.test(String(label || '')) ? 'santiago' : 'qdb';
+}
+
+function budgetBucketForCat(cat, entry) {
+  const mapped = loadBudgetMap()[cat.key];
+  if (validBucket(mapped)) return mapped;
+  return autoBucket(catTag(entry, cat), cat.label);
+}
+
+function budgetBucketForCustom(item) {
+  if (validBucket(item.budget)) return item.budget;
+  return autoBucket(item.tag, item.label);
+}
+
+function budgetLinkSelectHTML(value, attrs = '') {
+  const opts = [...BUDGET_BUCKETS.map(b => [b.key, b.label]), ['none', 'Fora do orçamento']];
+  return `<label class="budget-link"><span>Orçamento</span><select class="budget-link-select" ${attrs}>
+    ${opts.map(([k, l]) => `<option value="${k}" ${k === value ? 'selected' : ''}>${l}</option>`).join('')}
+  </select></label>`;
+}
+
+function onBudgetLinkInput(e) {
+  const map = loadBudgetMap();
+  map[e.target.dataset.budgetCat] = e.target.value;
+  localStorage.setItem(BUDGET_MAP_KEY, JSON.stringify(map));
+  saveBudget(loadBudget());
+  renderBudgetCard(loadMonth(currentYear, currentMonth));
+}
 
 function loadBudget() {
   try {
@@ -1201,7 +1273,7 @@ function loadBudget() {
 
 function saveBudget(budget) {
   const clean = {};
-  Object.entries(budget).forEach(([k, v]) => { const n = +v || 0; if (n > 0) clean[k] = n; });
+  BUDGET_BUCKETS.forEach(b => { clean[b.key] = +budget[b.key] || 0; });
   localStorage.setItem(BUDGET_KEY, JSON.stringify(clean));
 
   debounceSheetSave('budget', {
@@ -1211,31 +1283,37 @@ function saveBudget(budget) {
     month: "",
     tag: "all",
     category: "Orçamento",
-    description: "Atualização do orçamento mensal por categoria",
+    description: "Atualização do orçamento mensal (Santiago, QDB, Pessoal Gui, Pessoal Maysa)",
     amount: Object.values(clean).reduce((s, v) => s + v, 0),
     status: "updated",
-    notes: JSON.stringify(clean)
+    notes: JSON.stringify({ budget: clean, map: loadBudgetMap() })
   });
 }
 
-// Linhas visíveis com o filtro de tag atual: categorias base + bloco "Personalizadas"
-function budgetRows(data) {
+function budgetBreakdown(data) {
   const normalized = normalizeMonthData(data);
-  const budget = loadBudget();
-  const rows = [];
+  const out = {};
+  BUDGET_BUCKETS.forEach(b => { out[b.key] = { spent: 0, items: [] }; });
 
   allVarCats().forEach(cat => {
     const entry = normalized.cats[cat.key];
-    if (variableTagFilter !== 'all' && catTag(entry, cat) !== variableTagFilter) return;
-    rows.push({ key: cat.key, label: cat.label, icon: cat.icon, spent: catAmount(entry), budget: +budget[cat.key] || 0 });
+    const bucket = budgetBucketForCat(cat, entry);
+    if (!out[bucket]) return; // 'none'
+    out[bucket].spent += catAmount(entry);
+    out[bucket].items.push(cat.label);
   });
+  normalized.custom.forEach(item => {
+    const bucket = budgetBucketForCustom(item);
+    if (!out[bucket]) return;
+    out[bucket].spent += (+item.amount || 0);
+    out[bucket].items.push(item.label);
+  });
+  return out;
+}
 
-  const customSpent = normalized.custom
-    .filter(item => variableTagFilter === 'all' || normaliseTag(item.tag) === variableTagFilter)
-    .reduce((s, item) => s + (+item.amount || 0), 0);
-  rows.push({ key: BUDGET_CUSTOM_KEY, label: 'Personalizadas', icon: '➕', spent: customSpent, budget: +budget[BUDGET_CUSTOM_KEY] || 0 });
-
-  return rows;
+function budgetSpent(data) {
+  const bd = budgetBreakdown(data);
+  return Object.fromEntries(Object.entries(bd).map(([k, v]) => [k, v.spent]));
 }
 
 function budgetFillClass(pct) {
@@ -1244,27 +1322,45 @@ function budgetFillClass(pct) {
   return 'fill-ok';
 }
 
+function budgetRowStatus(spent, budget) {
+  if (!budget) return `<strong>${fmt(spent)}</strong> € gasto · sem orçamento`;
+  const diff = budget - spent;
+  return `<strong>${fmt(spent)}</strong> € gasto · ${diff >= 0 ? `faltam ${fmt(diff)} €` : `<span class="over">+${fmt(-diff)} € acima</span>`}`;
+}
+
 function renderBudgetSummary(data) {
   const wrap = document.getElementById('budget-summary-wrap');
   if (!wrap) return;
-  const rows = budgetRows(data).filter(r => r.budget > 0);
-  const totalBudget = rows.reduce((s, r) => s + r.budget, 0);
-  const totalSpent = rows.reduce((s, r) => s + r.spent, 0);
+  const budget = loadBudget();
+  const spent = budgetSpent(data);
+  const tracked = BUDGET_BUCKETS.filter(b => (+budget[b.key] || 0) > 0);
+  const totalBudget = tracked.reduce((s, b) => s + (+budget[b.key]), 0);
+  const totalSpent = tracked.reduce((s, b) => s + spent[b.key], 0);
   const remaining = totalBudget - totalSpent;
   const pct = totalBudget > 0 ? totalSpent / totalBudget * 100 : 0;
 
-  if (!totalBudget) { wrap.innerHTML = ''; return; }
+  // Atualiza linhas (barras e textos) sem recriar os inputs
+  BUDGET_BUCKETS.forEach(b => {
+    const bud = +budget[b.key] || 0;
+    const p = bud > 0 ? spent[b.key] / bud * 100 : 0;
+    const fill = document.querySelector(`[data-budget-fill="${b.key}"]`);
+    const status = document.querySelector(`[data-budget-status="${b.key}"]`);
+    if (fill) { fill.className = `budget-row-fill ${budgetFillClass(p)}`; fill.style.width = Math.min(p, 100) + '%'; }
+    if (status) status.innerHTML = budgetRowStatus(spent[b.key], bud);
+  });
 
-  // Ritmo diário só faz sentido no mês corrente
+  if (!totalBudget) {
+    wrap.innerHTML = `<div class="budget-empty" style="padding-top:0;margin-bottom:0.5rem">Escreve o orçamento mensal de cada envelope abaixo — vale para todos os meses.</div>`;
+    return;
+  }
+
   const now = new Date();
   let paceText = '';
   if (currentYear === now.getFullYear() && currentMonth === now.getMonth() + 1 && remaining > 0) {
-    const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
-    const daysLeft = daysInMonth - now.getDate() + 1;
-    paceText = `≈ ${fmt(remaining / daysLeft)} €/dia nos ${daysLeft} dias que faltam`;
+    const daysLeft = new Date(currentYear, currentMonth, 0).getDate() - now.getDate() + 1;
+    paceText = ` · ≈ ${fmt(remaining / daysLeft)} €/dia nos ${daysLeft} dias que faltam`;
   }
-
-  const overCount = rows.filter(r => r.spent > r.budget).length;
+  const overCount = tracked.filter(b => spent[b.key] > +budget[b.key]).length;
 
   wrap.innerHTML = `
     <div class="budget-summary">
@@ -1273,54 +1369,38 @@ function renderBudgetSummary(data) {
       <div class="budget-stat"><div class="budget-stat-label">${remaining >= 0 ? 'Disponível' : 'Excedido'}</div><div class="budget-stat-value ${remaining >= 0 ? 'ok' : 'over'}">${fmt(Math.abs(remaining))} €</div></div>
     </div>
     <div class="budget-total-bar"><div class="budget-total-fill ${budgetFillClass(pct)}" style="width:${Math.min(pct, 100)}%"></div></div>
-    <div class="budget-empty" style="padding-top:0;margin-top:-0.6rem;margin-bottom:0.6rem;font-size:0.75rem">
-      ${pct.toFixed(0)}% usado${paceText ? ' · ' + paceText : ''}${overCount ? ` · <span style="color:var(--danger);font-weight:600">${overCount} categoria${overCount !== 1 ? 's' : ''} acima do orçamento</span>` : ''}
+    <div class="budget-empty" style="padding-top:0;margin-top:-0.6rem;margin-bottom:0.4rem;font-size:0.75rem">
+      ${pct.toFixed(0)}% usado${paceText}${overCount ? ` · <span style="color:var(--danger);font-weight:600">${overCount} acima do orçamento</span>` : ''}
     </div>`;
 }
 
 function renderBudgetCard(data) {
   const card = document.getElementById('budget-card');
   if (!card) return;
-  const btn = document.getElementById('budget-edit-btn');
-  if (btn) btn.textContent = budgetEditMode ? 'Concluído' : 'Definir orçamento';
-
-  const allRows = budgetRows(data);
-  card.innerHTML = '<div id="budget-summary-wrap"></div><div id="budget-rows"></div>';
-  const list = document.getElementById('budget-rows');
-
-  if (budgetEditMode) {
-    list.innerHTML = `<div class="budget-empty" style="padding-top:0">Teto mensal por categoria (vale para todos os meses). Deixa a 0 para não acompanhar.</div>` +
-      allRows.map(r => `
-        <div class="budget-row">
-          <div class="var-icon">${r.icon}</div>
-          <div class="budget-row-name">${r.label}</div>
-          <div class="var-input-wrap">
-            <input class="budget-input" type="number" min="0" step="1" placeholder="0" value="${r.budget || ''}" data-budget-key="${r.key}" aria-label="Orçamento de ${r.label}" />
-            <span class="var-currency">€</span>
-          </div>
-        </div>`).join('');
-    list.querySelectorAll('.budget-input').forEach(inp => inp.addEventListener('input', onBudgetInput));
-  } else {
-    const rows = allRows.filter(r => r.budget > 0);
-    if (!rows.length) {
-      list.innerHTML = `<div class="budget-empty">Ainda não há orçamento${variableTagFilter === 'all' ? '' : ` para a tag <strong>${variableTagFilter}</strong>`}. Clica em <strong>Definir orçamento</strong> para pôr um teto mensal em cada categoria.</div>`;
-    } else {
-      list.innerHTML = rows
-        .sort((a, b) => (b.spent / b.budget) - (a.spent / a.budget))
-        .map(r => {
-          const pct = r.spent / r.budget * 100;
-          const diff = r.budget - r.spent;
-          return `
-          <div class="budget-row">
-            <div class="var-icon">${r.icon}</div>
-            <div class="budget-row-name">${r.label}</div>
-            <div class="budget-row-nums"><strong>${fmt(r.spent)}</strong> / ${fmt(r.budget)} € · ${diff >= 0 ? `faltam ${fmt(diff)} €` : `<span class="over">+${fmt(-diff)} €</span>`}</div>
-            <div class="budget-row-bar"><div class="budget-row-fill ${budgetFillClass(pct)}" style="width:${Math.min(pct, 100)}%"></div></div>
-          </div>`;
-        }).join('');
-    }
+  // Não recriar enquanto se escreve num valor de orçamento
+  if (card.contains(document.activeElement) && document.activeElement.classList.contains('budget-input')) {
+    renderBudgetSummary(data);
+    return;
   }
+  const budget = loadBudget();
+  const breakdown = budgetBreakdown(data);
 
+  card.innerHTML = '<div id="budget-summary-wrap"></div>' + BUDGET_BUCKETS.map(b => `
+    <div class="budget-row">
+      <div class="var-icon">${b.icon}</div>
+      <div>
+        <div class="budget-row-name">${b.label}</div>
+        <div class="budget-row-nums" data-budget-status="${b.key}"></div>
+        <div class="budget-row-items">${breakdown[b.key].items.length ? breakdown[b.key].items.join(' · ') : 'Nenhum item associado'}</div>
+      </div>
+      <div class="var-input-wrap">
+        <input class="budget-input" type="number" min="0" step="1" placeholder="0" value="${+budget[b.key] || ''}" data-budget-key="${b.key}" aria-label="Orçamento ${b.label}" />
+        <span class="var-currency">€</span>
+      </div>
+      <div class="budget-row-bar"><div class="budget-row-fill" data-budget-fill="${b.key}"></div></div>
+    </div>`).join('');
+
+  card.querySelectorAll('.budget-input').forEach(inp => inp.addEventListener('input', onBudgetInput));
   renderBudgetSummary(data);
 }
 
@@ -1329,11 +1409,6 @@ function onBudgetInput(e) {
   budget[e.target.dataset.budgetKey] = parseFloat(e.target.value) || 0;
   saveBudget(budget);
   renderBudgetSummary(loadMonth(currentYear, currentMonth));
-}
-
-function toggleBudgetEdit() {
-  budgetEditMode = !budgetEditMode;
-  renderBudgetCard(loadMonth(currentYear, currentMonth));
 }
 
 // ─── TAB SWITCH ──────────────────────────────────────────────────────────────
