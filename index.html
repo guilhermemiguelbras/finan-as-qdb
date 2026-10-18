@@ -162,6 +162,33 @@
   .tag-select:focus { border-color: var(--accent); }
   .fixed-tag-cell { display:flex; justify-content:flex-end; align-items:center; }
 
+  /* BUDGET CARD */
+  .budget-head { display:flex; align-items:center; gap:6px; }
+  .budget-edit-btn { margin-left:auto; background:none; border:0.5px solid rgba(91,61,143,0.35); color:var(--variable); border-radius:999px; padding:0.3rem 0.75rem; font-size:0.72rem; cursor:pointer; text-transform:none; letter-spacing:0; }
+  .budget-edit-btn:hover { background: var(--variable-light); }
+  .budget-summary { display:grid; grid-template-columns: repeat(3, 1fr); gap:0.8rem; margin-bottom:1rem; }
+  .budget-stat { background: var(--surface2); border-radius:10px; padding:0.7rem 0.85rem; }
+  .budget-stat-label { font-size:0.64rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-muted); margin-bottom:0.2rem; }
+  .budget-stat-value { font-family:'Playfair Display', serif; font-size:1.2rem; font-weight:700; color:var(--text); font-variant-numeric: tabular-nums; }
+  .budget-stat-value.ok { color: var(--success); }
+  .budget-stat-value.over { color: var(--danger); }
+  .budget-total-bar { height:8px; background: var(--surface2); border-radius:99px; overflow:hidden; margin-bottom:1.1rem; }
+  .budget-total-fill { height:100%; border-radius:99px; transition: width 0.25s; }
+  .budget-row { display:grid; grid-template-columns: 1.6rem 1fr auto; gap:4px 10px; align-items:center; padding:0.55rem 0; border-bottom:0.5px solid var(--border); font-size:0.85rem; }
+  .budget-row:last-child { border-bottom:none; }
+  .budget-row-name { color: var(--text); }
+  .budget-row-nums { font-variant-numeric: tabular-nums; color: var(--text-muted); font-size:0.78rem; text-align:right; white-space:nowrap; }
+  .budget-row-nums strong { color: var(--text); font-weight:600; }
+  .budget-row-nums .over { color: var(--danger); font-weight:600; }
+  .budget-row-bar { grid-column: 2 / -1; height:5px; background: var(--surface2); border-radius:99px; overflow:hidden; }
+  .budget-row-fill { height:100%; border-radius:99px; }
+  .fill-ok { background: var(--success); }
+  .fill-warn { background: var(--warning); }
+  .fill-over { background: var(--danger); }
+  .budget-input { font-size:0.875rem; font-weight:500; color:var(--text); font-variant-numeric: tabular-nums; border:none; background:transparent; text-align:right; width:90px; outline:none; border-bottom:1px solid var(--border); padding:2px 0; }
+  .budget-input:focus { border-bottom-color: var(--variable); }
+  .budget-empty { color: var(--text-muted); font-size:0.85rem; padding:0.5rem 0 0.25rem; line-height:1.5; }
+
   footer { text-align: center; font-size: 0.75rem; color: var(--text-muted); padding: 1.5rem; border-top: 0.5px solid var(--border); letter-spacing: 0.03em; }
 
   @media (max-width: 620px) {
@@ -170,6 +197,9 @@
     .kpi:last-child { grid-column: 1 / -1; }
     .grid { grid-template-columns: 1fr; }
     .progress-bar-bg { width: 70px; }
+    .budget-summary { grid-template-columns: 1fr 1fr; }
+    .budget-summary .budget-stat:last-child { grid-column: 1 / -1; }
+    .budget-row-nums { grid-column: 2 / -1; text-align: left; white-space: normal; }
     .var-row { grid-template-columns: 1.5rem 1fr 90px; }
     .var-row .tag-select { grid-column: 2 / -1; max-width: 100%; }
     .fixed-item { grid-template-columns: 1fr auto; }
@@ -325,6 +355,15 @@
       </div>
     </div>
 
+  </div>
+
+  <!-- Budget -->
+  <div class="card" style="margin-bottom:1.25rem">
+    <div class="card-title budget-head">
+      <span class="dot" style="background:#1a7a4a"></span>Orçamento do mês
+      <button class="budget-edit-btn" id="budget-edit-btn" onclick="toggleBudgetEdit()">Definir orçamento</button>
+    </div>
+    <div id="budget-card"></div>
   </div>
 
   <!-- History -->
@@ -980,6 +1019,7 @@ function renderVariableMonth() {
   renderVarCharts(data);
   renderHistory();
   updateVarInsight(data);
+  renderBudgetCard(data);
 }
 
 function onVarInput(e) {
@@ -1009,6 +1049,7 @@ function onVarInput(e) {
   renderVarCharts(data);
   renderHistory();
   updateVarInsight(data);
+  renderBudgetCard(data);
 }
 
 function onCustomVarInput(e) {
@@ -1033,6 +1074,7 @@ function onCustomVarInput(e) {
   renderVarCharts(data);
   renderHistory();
   updateVarInsight(data);
+  renderBudgetCard(data);
 }
 
 function addVariableItem() {
@@ -1143,6 +1185,155 @@ function updateVarInsight(data) {
   document.getElementById('var-insight').innerHTML=vt>0
     ? `<strong>Este mês:</strong> Variáveis de <strong>${fmt(vt)} €</strong> em ${tagText} representam <strong>${pct}%</strong> do total filtrado (<strong>${fmt(grand)} €</strong>).${avgText}`
     : `<strong>Dica:</strong> Preenche os valores acima — ficam guardados automaticamente por mês e por tag. Também podes adicionar despesas variáveis novas.`;
+}
+
+// ─── BUDGET (orçamento mensal por categoria, igual todos os meses) ──────────
+const BUDGET_KEY = 'orcamento_budget_v1';
+const BUDGET_CUSTOM_KEY = '__custom';
+let budgetEditMode = false;
+
+function loadBudget() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(BUDGET_KEY));
+    return raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  } catch { return {}; }
+}
+
+function saveBudget(budget) {
+  const clean = {};
+  Object.entries(budget).forEach(([k, v]) => { const n = +v || 0; if (n > 0) clean[k] = n; });
+  localStorage.setItem(BUDGET_KEY, JSON.stringify(clean));
+
+  debounceSheetSave('budget', {
+    date: new Date().toISOString(),
+    type: "budget",
+    year: "",
+    month: "",
+    tag: "all",
+    category: "Orçamento",
+    description: "Atualização do orçamento mensal por categoria",
+    amount: Object.values(clean).reduce((s, v) => s + v, 0),
+    status: "updated",
+    notes: JSON.stringify(clean)
+  });
+}
+
+// Linhas visíveis com o filtro de tag atual: categorias base + bloco "Personalizadas"
+function budgetRows(data) {
+  const normalized = normalizeMonthData(data);
+  const budget = loadBudget();
+  const rows = [];
+
+  allVarCats().forEach(cat => {
+    const entry = normalized.cats[cat.key];
+    if (variableTagFilter !== 'all' && catTag(entry, cat) !== variableTagFilter) return;
+    rows.push({ key: cat.key, label: cat.label, icon: cat.icon, spent: catAmount(entry), budget: +budget[cat.key] || 0 });
+  });
+
+  const customSpent = normalized.custom
+    .filter(item => variableTagFilter === 'all' || normaliseTag(item.tag) === variableTagFilter)
+    .reduce((s, item) => s + (+item.amount || 0), 0);
+  rows.push({ key: BUDGET_CUSTOM_KEY, label: 'Personalizadas', icon: '➕', spent: customSpent, budget: +budget[BUDGET_CUSTOM_KEY] || 0 });
+
+  return rows;
+}
+
+function budgetFillClass(pct) {
+  if (pct > 100) return 'fill-over';
+  if (pct >= 80) return 'fill-warn';
+  return 'fill-ok';
+}
+
+function renderBudgetSummary(data) {
+  const wrap = document.getElementById('budget-summary-wrap');
+  if (!wrap) return;
+  const rows = budgetRows(data).filter(r => r.budget > 0);
+  const totalBudget = rows.reduce((s, r) => s + r.budget, 0);
+  const totalSpent = rows.reduce((s, r) => s + r.spent, 0);
+  const remaining = totalBudget - totalSpent;
+  const pct = totalBudget > 0 ? totalSpent / totalBudget * 100 : 0;
+
+  if (!totalBudget) { wrap.innerHTML = ''; return; }
+
+  // Ritmo diário só faz sentido no mês corrente
+  const now = new Date();
+  let paceText = '';
+  if (currentYear === now.getFullYear() && currentMonth === now.getMonth() + 1 && remaining > 0) {
+    const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+    const daysLeft = daysInMonth - now.getDate() + 1;
+    paceText = `≈ ${fmt(remaining / daysLeft)} €/dia nos ${daysLeft} dias que faltam`;
+  }
+
+  const overCount = rows.filter(r => r.spent > r.budget).length;
+
+  wrap.innerHTML = `
+    <div class="budget-summary">
+      <div class="budget-stat"><div class="budget-stat-label">Orçamento</div><div class="budget-stat-value">${fmt(totalBudget)} €</div></div>
+      <div class="budget-stat"><div class="budget-stat-label">Gasto</div><div class="budget-stat-value">${fmt(totalSpent)} €</div></div>
+      <div class="budget-stat"><div class="budget-stat-label">${remaining >= 0 ? 'Disponível' : 'Excedido'}</div><div class="budget-stat-value ${remaining >= 0 ? 'ok' : 'over'}">${fmt(Math.abs(remaining))} €</div></div>
+    </div>
+    <div class="budget-total-bar"><div class="budget-total-fill ${budgetFillClass(pct)}" style="width:${Math.min(pct, 100)}%"></div></div>
+    <div class="budget-empty" style="padding-top:0;margin-top:-0.6rem;margin-bottom:0.6rem;font-size:0.75rem">
+      ${pct.toFixed(0)}% usado${paceText ? ' · ' + paceText : ''}${overCount ? ` · <span style="color:var(--danger);font-weight:600">${overCount} categoria${overCount !== 1 ? 's' : ''} acima do orçamento</span>` : ''}
+    </div>`;
+}
+
+function renderBudgetCard(data) {
+  const card = document.getElementById('budget-card');
+  if (!card) return;
+  const btn = document.getElementById('budget-edit-btn');
+  if (btn) btn.textContent = budgetEditMode ? 'Concluído' : 'Definir orçamento';
+
+  const allRows = budgetRows(data);
+  card.innerHTML = '<div id="budget-summary-wrap"></div><div id="budget-rows"></div>';
+  const list = document.getElementById('budget-rows');
+
+  if (budgetEditMode) {
+    list.innerHTML = `<div class="budget-empty" style="padding-top:0">Teto mensal por categoria (vale para todos os meses). Deixa a 0 para não acompanhar.</div>` +
+      allRows.map(r => `
+        <div class="budget-row">
+          <div class="var-icon">${r.icon}</div>
+          <div class="budget-row-name">${r.label}</div>
+          <div class="var-input-wrap">
+            <input class="budget-input" type="number" min="0" step="1" placeholder="0" value="${r.budget || ''}" data-budget-key="${r.key}" aria-label="Orçamento de ${r.label}" />
+            <span class="var-currency">€</span>
+          </div>
+        </div>`).join('');
+    list.querySelectorAll('.budget-input').forEach(inp => inp.addEventListener('input', onBudgetInput));
+  } else {
+    const rows = allRows.filter(r => r.budget > 0);
+    if (!rows.length) {
+      list.innerHTML = `<div class="budget-empty">Ainda não há orçamento${variableTagFilter === 'all' ? '' : ` para a tag <strong>${variableTagFilter}</strong>`}. Clica em <strong>Definir orçamento</strong> para pôr um teto mensal em cada categoria.</div>`;
+    } else {
+      list.innerHTML = rows
+        .sort((a, b) => (b.spent / b.budget) - (a.spent / a.budget))
+        .map(r => {
+          const pct = r.spent / r.budget * 100;
+          const diff = r.budget - r.spent;
+          return `
+          <div class="budget-row">
+            <div class="var-icon">${r.icon}</div>
+            <div class="budget-row-name">${r.label}</div>
+            <div class="budget-row-nums"><strong>${fmt(r.spent)}</strong> / ${fmt(r.budget)} € · ${diff >= 0 ? `faltam ${fmt(diff)} €` : `<span class="over">+${fmt(-diff)} €</span>`}</div>
+            <div class="budget-row-bar"><div class="budget-row-fill ${budgetFillClass(pct)}" style="width:${Math.min(pct, 100)}%"></div></div>
+          </div>`;
+        }).join('');
+    }
+  }
+
+  renderBudgetSummary(data);
+}
+
+function onBudgetInput(e) {
+  const budget = loadBudget();
+  budget[e.target.dataset.budgetKey] = parseFloat(e.target.value) || 0;
+  saveBudget(budget);
+  renderBudgetSummary(loadMonth(currentYear, currentMonth));
+}
+
+function toggleBudgetEdit() {
+  budgetEditMode = !budgetEditMode;
+  renderBudgetCard(loadMonth(currentYear, currentMonth));
 }
 
 // ─── TAB SWITCH ──────────────────────────────────────────────────────────────
