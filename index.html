@@ -162,6 +162,15 @@
   .tag-select:focus { border-color: var(--accent); }
   .fixed-tag-cell { display:flex; justify-content:flex-end; align-items:center; }
 
+  /* SPLIT CARD (custo fixo por pessoa) */
+  .split-mini { display:grid; grid-template-columns: 1fr 1fr; gap:0.6rem; margin-top:0.9rem; padding-top:0.8rem; border-top:0.5px solid var(--border); }
+  .split-person { background: var(--surface2); border-radius:8px; padding:0.6rem 0.75rem; border-left:3px solid var(--accent); }
+  .split-person.guilherme { border-left-color:#2a5f8f; }
+  .split-person.maysa { border-left-color:#b03060; }
+  .split-person-label { font-size:0.64rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-muted); }
+  .split-person-value { font-family:'Playfair Display', serif; font-size:1.15rem; font-weight:700; color:var(--text); margin:0.1rem 0; font-variant-numeric: tabular-nums; }
+  .split-person-detail { font-size:0.68rem; color:var(--text-muted); line-height:1.35; }
+
   /* BUDGET CARD */
   .budget-head { display:flex; align-items:center; gap:6px; }
   .budget-edit-btn { margin-left:auto; background:none; border:0.5px solid rgba(91,61,143,0.35); color:var(--variable); border-radius:999px; padding:0.3rem 0.75rem; font-size:0.72rem; cursor:pointer; text-transform:none; letter-spacing:0; }
@@ -266,6 +275,7 @@
       <div class="chart-wrap">
         <canvas id="donutChart" role="img" aria-label="Gráfico de despesas mensais por categoria">Gráfico de despesas.</canvas>
       </div>
+      <div class="split-mini" id="fixed-split-card" aria-label="Custo fixo mensal por pessoa"></div>
     </div>
   </div>
 
@@ -640,6 +650,29 @@ function fixedTagTotals(source = null) {
   }, {});
 }
 
+// Custo fixo mensal por pessoa: cada um paga as suas despesas + a sua quota de QDB.
+const QDB_SPLIT = { Guilherme: 0.6, Maysa: 0.4 };
+
+function renderFixedSplitCard(source = null) {
+  const el = document.getElementById('fixed-split-card');
+  if (!el) return;
+  const t = fixedTagTotals(source);
+  const qdb = t.QDB || 0;
+  const people = [
+    { name: 'Guilherme', cls: 'guilherme', own: t.Guilherme || 0, share: QDB_SPLIT.Guilherme },
+    { name: 'Maysa',     cls: 'maysa',     own: t.Maysa || 0,     share: QDB_SPLIT.Maysa },
+  ];
+  el.innerHTML = people.map(p => {
+    const qdbPart = qdb * p.share;
+    return `
+      <div class="split-person ${p.cls}">
+        <div class="split-person-label">${p.name} · custo fixo/mês</div>
+        <div class="split-person-value">${fmt(p.own + qdbPart)} €</div>
+        <div class="split-person-detail">${fmt(p.own)} € próprio + ${fmt(qdbPart)} € QDB (${Math.round(p.share*100)}%)</div>
+      </div>`;
+  }).join('');
+}
+
 function renderFixedTab() {
   const expenses = loadFixed();
   const debts    = loadDebts();
@@ -652,6 +685,7 @@ function renderFixedTab() {
   document.getElementById('kpi-annual').textContent  = fmt(totalVisible*12) + ' €';
   document.getElementById('kpi-debt').textContent    = fmt(debtTotal) + ' €';
   renderTagSummary('fixed-tag-summary', fixedTagTotals(expenses));
+  renderFixedSplitCard(expenses);
 
   // Fixed editable list
   const list = document.getElementById('fixed-list');
@@ -756,6 +790,7 @@ function onFixedInput(e) {
   document.getElementById('kpi-monthly').textContent = fmt(totalVisible) + ' €';
   document.getElementById('kpi-annual').textContent  = fmt(totalVisible*12) + ' €';
   renderTagSummary('fixed-tag-summary', fixedTagTotals(expenses));
+  renderFixedSplitCard(expenses);
 
   document.querySelectorAll('.fixed-item').forEach((li) => {
     const idx = +li.dataset.idx;
